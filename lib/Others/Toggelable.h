@@ -66,7 +66,6 @@ public:
     virtual void on() = 0;
     virtual void off() = 0;
     virtual void toggle() = 0;
-    virtual String getName() = 0;
 
     virtual ~Togglable() {} // Virtual destructor for proper polymorphic destruction
 };

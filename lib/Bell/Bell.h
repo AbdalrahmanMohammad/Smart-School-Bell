@@ -1,23 +1,23 @@
-#ifndef LED_h
-#define LED_h
+#ifndef Bell_h
+#define Bell_h
 
 #include <Arduino.h>
 #include <Toggelable.h>
 
-class LED : public Togglable
+class Bell : public Togglable
 {
 private:
     byte pin;
     byte buttonPin; // it is optional to use
-    boolean state;
     boolean hasbutton;
+    boolean offState = LOW;
+    boolean onState = HIGH;
 
 public:
-    LED(byte pin)
+    Bell(byte pin)
     {
         hasbutton = false;
         this->pin = pin;
-        state = LOW;
         // previous = 0UL;
         // duration = 0UL;
         // startTime = 0UL;
@@ -26,8 +26,8 @@ public:
         buttonPin = -1;
     }
 
-    LED(byte pin, byte buttonPin) : LED(pin)
-    { // i called the first constructor
+    Bell(byte pin, byte buttonPin) : Bell(pin)
+    {
         setButton(buttonPin);
     }
 
@@ -38,46 +38,29 @@ public:
             pinMode(buttonPin, INPUT_PULLUP);
         }
         pinMode(pin, OUTPUT);
-    }
-    virtual void init(byte defaultState)
-    {
-        init();
-        if (defaultState == HIGH)
-        {
-            on();
-        }
-        else
-        {
-            off();
-        }
+        off();
+        setDuration(3000UL); // default duration 5 seconds
     }
 
     virtual void on() override
     {
-        digitalWrite(pin, HIGH);
-        state = HIGH;
+        if (getDuration() > 0UL)
+        {
+            digitalWrite(pin, onState);
+            setStartTime(millis());
+        }
     }
     virtual void off() override
     {
-        digitalWrite(pin, LOW);
-        state = LOW;
+        digitalWrite(pin, offState);
+    }
+    virtual void toggle() override // you can just digialWrite(pin,!digitalRead(pin)); but this is better
+    {
     }
 
     virtual bool isOn()
     {
-        return (state == HIGH);
-    }
-
-    virtual void toggle() override // you can just digialWrite(pin,!digitalRead(pin)); but this is better
-    {
-        if (isOn())
-        {
-            off();
-        }
-        else
-        {
-            on();
-        }
+        return digitalRead(pin) == onState;
     }
 
     virtual void setButton(int i)
@@ -111,15 +94,24 @@ public:
         if ((btncurstate == LOW) && (btnprevstate == HIGH) && (millis() - previous > 500)) // button pressed and debounce
         {
             previous = millis(); // for debounce
-            toggle();
+            on();
             btnprevstate = btncurstate;
         }
         btnprevstate = btncurstate;
     }
 
+    virtual void turnOffAfterDuration()
+    {
+        if (getDuration() > 0UL && isOn() && (millis() - getStartTime()) > getDuration())
+        {
+            off();
+        }
+    }
+
     virtual void loop()
     {
         moniterBtn();
+        turnOffAfterDuration();
     }
 };
 
