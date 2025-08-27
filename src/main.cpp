@@ -1,18 +1,20 @@
-#include <Arduino.h>
+#include <header.h>
+#include <func.h>
 
-// put function declarations here:
-int myFunction(int, int);
-
-void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+void setup()
+{
+  Serial.begin(9600);
+  led.init();
+  // pinMode(buzzer, OUTPUT);
+  // pinMode(wifiLed, OUTPUT);
+  // connect_wifi();
 }
 
-void loop() {
-  // put your main code here, to run repeatedly:
-}
+void loop()
+{
+  // checkWifi();
 
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+  // float x = measure(30);
+
+  control();
 }
