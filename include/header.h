@@ -4,6 +4,12 @@
 #include "Timer.h"
 #include <Wire.h>
 #include "RTClib.h"
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+
+// Create a web server on port 80
+ESP8266WebServer server(80);
+
 
 #define SCL D1
 #define SDA D2
