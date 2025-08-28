@@ -2,12 +2,14 @@
 #include <LED.h>
 #include <Bell.h>
 #include "Timer.h"
+#include <Wire.h>
+#include "RTClib.h"
 
-#define SDA D1
-#define SCL D2
+#define SCL D1
+#define SDA D2
+RTC_DS3231 rtc;
+
 
 Timer timer(20UL);
-LED led(D8, D6);
-Bell bell(D3, D1);
-
-int buzzer = D8;
+LED led(D7, D6);
+Bell bell(D5);
