@@ -1,59 +1,32 @@
 
+void initLittleFS()
+{
+    if (!LittleFS.begin())
+    {
+        Serial.println("LittleFS initialization failed!");
+        return;
+    }
+    Serial.println("LittleFS initialized successfully!");
+    Serial.println("Files on LittleFS:");
+    Dir dir = LittleFS.openDir("/"); // Root directory
+    while (dir.next())
+    {
+        Serial.print(dir.fileName());
+        Serial.print("  \t");
+        Serial.println(dir.fileSize());
+    }
+}
+
 void handleRoot()
 {
-    String html = R"rawliteral(
-  <!DOCTYPE html>
-  <html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NodeMCU Access Point</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background: linear-gradient(to right, #6a11cb, #2575fc);
-        color: white;
-        text-align: center;
-        padding: 50px;
-      }
-      h1 {
-        font-size: 2.5em;
-        margin-bottom: 20px;
-      }
-      p {
-        font-size: 1.2em;
-      }
-      a.button {
-        display: inline-block;
-        margin-top: 30px;
-        padding: 15px 30px;
-        font-size: 1.2em;
-        color: #2575fc;
-        background: white;
-        border-radius: 8px;
-        text-decoration: none;
-        transition: 0.3s;
-      }
-      a.button:hover {
-        background: #f0f0f0;
-      }
-      footer {
-        margin-top: 50px;
-        font-size: 0.9em;
-        opacity: 0.8;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Welcome to NodeMCU AP</h1>
-    <p>You are now connected to the NodeMCU Access Point.</p>
-    <a class="button" href="/">Refresh</a>
-    <footer>NodeMCU Web Server &copy; 2025</footer>
-  </body>
-  </html>
-  )rawliteral";
-
-    server.send(200, "text/html", html);
+    File file = LittleFS.open("/index.html", "r");
+    if (!file)
+    {
+        server.send(500, "text/plain", "Failed to open file");
+        return;
+    }
+    server.streamFile(file, "text/html");
+    file.close();
 }
 
 void WifiSetup()

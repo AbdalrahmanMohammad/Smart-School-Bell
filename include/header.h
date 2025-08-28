@@ -6,6 +6,8 @@
 #include "RTClib.h"
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
+#include <LittleFS.h>
+
 
 // Create a web server on port 80
 ESP8266WebServer server(80);

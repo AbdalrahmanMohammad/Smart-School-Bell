@@ -4,6 +4,7 @@
 void setup()
 {
   Serial.begin(9600);
+  initLittleFS();
   led.init();
   bell.init();
   WifiSetup();
@@ -12,8 +13,7 @@ void setup()
 
 void loop()
 {
-
   server.handleClient(); // handle incoming client requests
-  showTime();
+  // showTime();
   controlDevices();
 }
