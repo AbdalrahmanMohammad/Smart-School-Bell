@@ -1,20 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NodeMCU Access Point</title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="./style.css">
 </head>
+
 <body>
   <h1>Welcome to NodeMCU AP!!</h1>
   <p>You are now connected to the NodeMCU Access Point.</p>
-  
+
   <div id="time-display">
     <h2>Current Time</h2>
     <p id="current-time">Loading...</p>
   </div>
-  
+
   <div id="device-controls">
     <h2>Device Controls</h2>
     <div class="control-buttons">
@@ -26,10 +28,40 @@
       </button>
     </div>
   </div>
-  
+  <!-- /////////////////////////// -->
+  <div id="alarm-schedules">
+    <h2>Alarm Schedules</h2>
+    <div id="schedules-list">
+      <p>Loading schedules...</p>
+    </div>
+
+    <div class="add-alarm-form">
+      <h3>Add New Alarm</h3>
+      <div class="form-group">
+        <label for="alarm-time">Time:</label>
+        <input type="time" id="alarm-time" required>
+      </div>
+      <div class="form-group">
+        <label>Days:</label>
+        <div class="day-checkboxes">
+          <input type="checkbox" id="day-0" value="0"><label for="day-0">Sun</label>
+          <input type="checkbox" id="day-1" value="1"><label for="day-1">Mon</label>
+          <input type="checkbox" id="day-2" value="2"><label for="day-2">Tue</label>
+          <input type="checkbox" id="day-3" value="3"><label for="day-3">Wed</label>
+          <input type="checkbox" id="day-4" value="4"><label for="day-4">Thu</label>
+          <input type="checkbox" id="day-5" value="5"><label for="day-5">Fri</label>
+          <input type="checkbox" id="day-6" value="6"><label for="day-6">Sat</label>
+        </div>
+      </div>
+      
+      <button onclick="addAlarm()" class="add-btn">Add Alarm</button>
+    </div>
+  </div>
+  <!-- //////////////////////////////////////// -->
   <a class="button" href="/">Refresh</a>
   <footer>NodeMCU Web Server &copy; 2025</footer>
-  
-  <script src="/script.js"></script>
+
+  <script src="./script.js"></script>
 </body>
+
 </html>
