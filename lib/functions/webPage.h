@@ -383,6 +383,147 @@ void handleDeleteSchedule()
     Serial.println("=== handleDeleteSchedule() END ===");
 }
 
+void handleEditSchedule()
+{
+    Serial.println("=== handleEditSchedule() START ===");
+    
+    // Check if we have POST data
+    if (!server.hasArg("plain"))
+    {
+        Serial.println("❌ No POST data");
+        server.send(400, "application/json", "{\"success\":false}");
+        return;
+    }
+    
+    Serial.println("✅ Step 1: Got POST data");
+    
+    // Get the raw data
+    String jsonData = server.arg("plain");
+    Serial.print("📥 Length: ");
+    Serial.println(jsonData.length());
+    
+    // Parse the request with minimal buffer
+    Serial.println("🔄 Step 2: Parse request");
+    StaticJsonDocument<256> requestDoc;
+    DeserializationError error = deserializeJson(requestDoc, jsonData);
+    
+    if (error)
+    {
+        Serial.println("❌ Parse failed");
+        server.send(400, "application/json", "{\"success\":false}");
+        return;
+    }
+    
+    Serial.println("✅ Step 2: Parsed");
+    
+    // Get the edit data
+    int index = requestDoc["index"];
+    const char* newTime = requestDoc["time"];
+    JsonArray newDays = requestDoc["days"];
+    bool newEnabled = requestDoc["enabled"];
+    
+    Serial.print("🎯 Index: ");
+    Serial.println(index);
+    Serial.print("🕐 New time: ");
+    Serial.println(newTime);
+    Serial.print("📅 Days count: ");
+    Serial.println(newDays.size());
+    Serial.print("🔔 Enabled: ");
+    Serial.println(newEnabled ? "true" : "false");
+    
+    // Open file
+    Serial.println("🔄 Step 3: Open file");
+    File file = LittleFS.open("/schedules.json", "r");
+    if (!file)
+    {
+        Serial.println("❌ File not found");
+        server.send(404, "application/json", "{\"success\":false}");
+        return;
+    }
+    
+    Serial.println("✅ Step 3: File opened");
+    
+    // Read file content
+    String fileContent = file.readString();
+    file.close();
+    
+    Serial.print("📏 Size: ");
+    Serial.println(fileContent.length());
+    
+    // Parse schedules with smaller buffer
+    Serial.println("🔄 Step 4: Parse schedules");
+    StaticJsonDocument<1024> schedulesDoc;
+    error = deserializeJson(schedulesDoc, fileContent);
+    
+    if (error)
+    {
+        Serial.println("❌ Schedule parse failed");
+        server.send(400, "application/json", "{\"success\":false}");
+        return;
+    }
+    
+    Serial.println("✅ Step 4: Schedules parsed");
+    
+    // Get schedules array
+    JsonArray schedules = schedulesDoc["schedules"];
+    int count = schedules.size();
+    Serial.print("📊 Count: ");
+    Serial.println(count);
+    
+    // Validate index
+    if (index < 0 || index >= count)
+    {
+        Serial.println("❌ Invalid index");
+        server.send(400, "application/json", "{\"success\":false}");
+        return;
+    }
+    
+    Serial.println("✅ Step 5: Index valid");
+    
+    // Update the schedule
+    Serial.println("🔄 Step 6: Update schedule");
+    JsonObject schedule = schedules[index];
+    
+    // Update time
+    schedule["time"] = newTime;
+    
+    // Update days array
+    schedule.remove("days");
+    JsonArray daysArray = schedule.createNestedArray("days");
+    for (JsonVariant day : newDays)
+    {
+        daysArray.add(day.as<int>());
+    }
+    
+    // Update enabled status
+    schedule["enabled"] = newEnabled;
+    
+    Serial.println("✅ Step 6: Updated");
+    
+    // Write back to file
+    Serial.println("🔄 Step 7: Write file");
+    File writeFile = LittleFS.open("/schedules.json", "w");
+    if (!writeFile)
+    {
+        Serial.println("❌ Write failed");
+        server.send(500, "application/json", "{\"success\":false}");
+        return;
+    }
+    
+    // Write directly to file
+    serializeJson(schedulesDoc, writeFile);
+    writeFile.close();
+    
+    Serial.println("✅ Step 7: Written");
+    
+    // Send response
+    Serial.println("🔄 Step 8: Send response");
+    server.send(200, "application/json", "{\"success\":true}");
+    Serial.println("✅ Step 8: Sent");
+    
+    Serial.println("=== handleEditSchedule() END ===");
+}
+
 void WifiSetup()
 {
     // Configure as Access Point
@@ -406,6 +547,7 @@ void WifiSetup()
     server.on("/schedules", handleSchedules);
     server.on("/schedules/add", HTTP_POST, handleAddSchedule);
     server.on("/schedules/delete", HTTP_POST, handleDeleteSchedule);
+    server.on("/schedules/edit", HTTP_POST, handleEditSchedule); // Added edit route
     server.begin();
     Serial.println("Web server started");
 }

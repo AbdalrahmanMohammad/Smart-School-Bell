@@ -74,7 +74,7 @@ setInterval(updateDeviceStatus, 1000);
 loadSchedules();
 
 // Update schedules every 5 seconds
-setInterval(loadSchedules, 5000);
+// setInterval(loadSchedules, 5000);
 
 function loadSchedules() {
   fetch("/schedules")
@@ -235,26 +235,100 @@ function editAlarm(index) {
   const scheduleItem = document.getElementById(`schedule-${index}`);
   const timeDisplay = document.getElementById(`time-display-${index}`);
   const actionsDiv = scheduleItem.querySelector('.schedule-actions');
+  const daysDisplay = scheduleItem.querySelector('.schedule-days');
+  const statusDisplay = scheduleItem.querySelector('.schedule-status');
   
-  // Create edit form
+  // Get current schedule data
+  const currentTime = timeDisplay.textContent;
+  const currentDays = Array.from(daysDisplay.querySelectorAll('.days.selected')).map(day => {
+    const dayText = day.textContent;
+    const dayNames = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
+    return dayNames.indexOf(dayText);
+  });
+  const currentEnabled = statusDisplay.querySelector('.toggle-switch').classList.contains('enabled');
+  
+  // Create comprehensive edit form
   const editForm = document.createElement('div');
   editForm.className = 'edit-form';
   editForm.innerHTML = `
-    <div class="edit-time-input">
-      <input type="time" id="edit-time-${index}" value="${timeDisplay.textContent}" required>
+    <div class="edit-content">
+      <div class="edit-section">
+        <label>Time:</label>
+        <input type="time" id="edit-time-${index}" value="${currentTime}" required>
+      </div>
+      
+      <div class="edit-section">
+        <label>Days:</label>
+        <div class="edit-day-checkboxes">
+          <input type="checkbox" id="edit-day-0-${index}" value="0" ${currentDays.includes(0) ? 'checked' : ''}>
+          <label for="edit-day-0-${index}">Sun</label>
+          <input type="checkbox" id="edit-day-1-${index}" value="1" ${currentDays.includes(1) ? 'checked' : ''}>
+          <label for="edit-day-1-${index}">Mon</label>
+          <input type="checkbox" id="edit-day-2-${index}" value="2" ${currentDays.includes(2) ? 'checked' : ''}>
+          <label for="edit-day-2-${index}">Tue</label>
+          <input type="checkbox" id="edit-day-3-${index}" value="3" ${currentDays.includes(3) ? 'checked' : ''}>
+          <label for="edit-day-3-${index}">Wed</label>
+          <input type="checkbox" id="edit-day-4-${index}" value="4" ${currentDays.includes(4) ? 'checked' : ''}>
+          <label for="edit-day-4-${index}">Thu</label>
+          <input type="checkbox" id="edit-day-5-${index}" value="5" ${currentDays.includes(5) ? 'checked' : ''}>
+          <label for="edit-day-5-${index}">Fri</label>
+          <input type="checkbox" id="edit-day-6-${index}" value="6" ${currentDays.includes(6) ? 'checked' : ''}>
+          <label for="edit-day-6-${index}">Sat</label>
+        </div>
+      </div>
+      
+             <div class="edit-section">
+         <label>Status:</label>
+         <div class="edit-toggle-container">
+           <input type="checkbox" id="edit-enabled-${index}" ${currentEnabled ? 'checked' : ''}>
+           <div class="toggle-switch ${currentEnabled ? 'enabled' : 'disabled'}" id="edit-toggle-${index}"></div>
+           <span class="edit-toggle-text">${currentEnabled ? 'Enabled' : 'Disabled'}</span>
+         </div>
+       </div>
     </div>
+    
     <div class="edit-actions">
       <button class="save-btn" onclick="saveAlarmEdit(${index})">Save</button>
       <button class="cancel-btn" onclick="cancelAlarmEdit(${index})">Cancel</button>
     </div>
   `;
   
-  // Replace time display with edit form
+  // Hide original elements
   timeDisplay.style.display = 'none';
-  timeDisplay.parentNode.insertBefore(editForm, timeDisplay.nextSibling);
-  
-  // Hide action buttons during edit
+  daysDisplay.style.display = 'none';
+  statusDisplay.style.display = 'none';
   actionsDiv.style.display = 'none';
+  
+  // Insert edit form
+  const scheduleInfo = scheduleItem.querySelector('.schedule-info');
+  scheduleInfo.appendChild(editForm);
+  
+  // Add event listener for toggle text update and visual feedback
+  const toggleCheckbox = document.getElementById(`edit-enabled-${index}`);
+  const toggleText = editForm.querySelector('.edit-toggle-text');
+  const toggleSwitch = document.getElementById(`edit-toggle-${index}`);
+  
+  function updateToggleState() {
+    toggleText.textContent = toggleCheckbox.checked ? 'Enabled' : 'Disabled';
+    
+    // Update the toggle switch classes
+    if (toggleCheckbox.checked) {
+      toggleSwitch.className = 'toggle-switch enabled';
+    } else {
+      toggleSwitch.className = 'toggle-switch disabled';
+    }
+  }
+  
+  toggleCheckbox.addEventListener('change', updateToggleState);
+  
+  // Set initial state
+  updateToggleState();
+  
+  // Make the toggle switch clickable
+  toggleSwitch.addEventListener('click', function() {
+    toggleCheckbox.checked = !toggleCheckbox.checked;
+    updateToggleState();
+  });
 }
 
 function saveAlarmEdit(index) {
@@ -265,6 +339,20 @@ function saveAlarmEdit(index) {
     return;
   }
   
+  // Get selected days
+  const selectedDays = [];
+  document.querySelectorAll(`#schedule-${index} .edit-day-checkboxes input[type="checkbox"]:checked`).forEach(checkbox => {
+    selectedDays.push(parseInt(checkbox.value));
+  });
+  
+  if (selectedDays.length === 0) {
+    alert("Please select at least one day");
+    return;
+  }
+  
+  // Get enabled status
+  const newEnabled = document.getElementById(`edit-enabled-${index}`).checked;
+  
   // Send update request to server
   fetch("/schedules/edit", {
     method: "POST",
@@ -273,19 +361,18 @@ function saveAlarmEdit(index) {
     },
     body: JSON.stringify({ 
       index: index, 
-      time: newTime 
+      time: newTime,
+      days: selectedDays,
+      enabled: newEnabled
     }),
   })
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
-        // Update the display
-        const timeDisplay = document.getElementById(`time-display-${index}`);
-        timeDisplay.textContent = newTime;
         cancelAlarmEdit(index);
         loadSchedules(); // Reload to ensure consistency
       } else {
-        alert("Error updating alarm: " + data.message);
+        alert("Error updating alarm: " + (data.message || "Unknown error"));
       }
     })
     .catch((error) => {
@@ -297,17 +384,19 @@ function saveAlarmEdit(index) {
 function cancelAlarmEdit(index) {
   const scheduleItem = document.getElementById(`schedule-${index}`);
   const timeDisplay = document.getElementById(`time-display-${index}`);
+  const daysDisplay = scheduleItem.querySelector('.schedule-days');
+  const statusDisplay = scheduleItem.querySelector('.schedule-status');
   const actionsDiv = scheduleItem.querySelector('.schedule-actions');
   const editForm = scheduleItem.querySelector('.edit-form');
   
-  // Show time display again
+  // Show original elements again
   timeDisplay.style.display = 'block';
+  daysDisplay.style.display = 'flex';
+  statusDisplay.style.display = 'flex';
+  actionsDiv.style.display = 'flex';
   
   // Remove edit form
   if (editForm) {
     editForm.remove();
   }
-  
-  // Show action buttons again
-  actionsDiv.style.display = 'flex';
 }
