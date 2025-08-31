@@ -74,11 +74,11 @@ setInterval(updateDeviceStatus, 1000);
 loadSchedules();
 
 // Update schedules every 5 seconds
-setInterval(loadSchedules, 5000000000000000);
+setInterval(loadSchedules, 5000);
 
 function loadSchedules() {
-  // fetch("/schedules")
-  fetch("https://mocki.io/v1/0a97100d-fb9f-4508-add7-a19b6d1f52d5")
+  fetch("/schedules")
+  // fetch("https://mocki.io/v1/0a97100d-fb9f-4508-add7-a19b6d1f52d5")
     .then((response) => response.json())
     .then((data) => {
       displaySchedules(data.schedules);
