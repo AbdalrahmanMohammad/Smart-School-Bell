@@ -524,6 +524,74 @@ void handleEditSchedule()
     Serial.println("=== handleEditSchedule() END ===");
 }
 
+void handleSendTime()
+{
+    Serial.println("=== handleSendTime() START ===");
+    
+    // Check if we have POST data
+    if (!server.hasArg("plain"))
+    {
+        Serial.println("❌ No POST data received");
+        server.send(400, "application/json", "{\"success\":false,\"message\":\"No data received\"}");
+        return;
+    }
+    
+    Serial.println("✅ Step 1: Got POST data");
+    
+    // Get the raw JSON data
+    String jsonData = server.arg("plain");
+    Serial.print("📥 Raw JSON data: ");
+    Serial.println(jsonData);
+    
+    // Parse the JSON data
+    Serial.println("🔄 Step 2: Parsing JSON data");
+    StaticJsonDocument<256> doc;
+    DeserializationError error = deserializeJson(doc, jsonData);
+    
+    if (error)
+    {
+        Serial.print("❌ Step 2 FAILED: Failed to parse JSON - ");
+        Serial.println(error.c_str());
+        server.send(400, "application/json", "{\"success\":false,\"message\":\"Invalid JSON format\"}");
+        return;
+    }
+    
+    Serial.println("✅ Step 2: JSON parsed successfully");
+    
+    // Extract time data
+    const char* timeString = doc["time"];
+    long timestamp = doc["timestamp"];
+    
+    Serial.print("🕐 Received time: ");
+    Serial.println(timeString);
+    Serial.print("⏰ Timestamp: ");
+    Serial.println(timestamp);
+    
+    // Serial print the time information
+    Serial.println("📡 === PHONE TIME RECEIVED ===");
+    Serial.print("📱 Phone Time: ");
+    Serial.println(timeString);
+    Serial.print("🕒 Unix Timestamp: ");
+    Serial.println(timestamp);
+    Serial.println("📡 === END PHONE TIME ===");
+    
+    // Send success response
+    Serial.println("🔄 Step 3: Sending success response");
+    StaticJsonDocument<100> response;
+    response["success"] = true;
+    response["message"] = "Time received and printed to serial";
+    
+    String responseJson;
+    serializeJson(response, responseJson);
+    Serial.print("📤 Response: ");
+    Serial.println(responseJson);
+    
+    server.send(200, "application/json", responseJson);
+    Serial.println("✅ Step 3: Response sent successfully");
+    
+    Serial.println("=== handleSendTime() END ===");
+}
+
 void WifiSetup()
 {
     // Configure as Access Point
@@ -548,6 +616,7 @@ void WifiSetup()
     server.on("/schedules/add", HTTP_POST, handleAddSchedule);
     server.on("/schedules/delete", HTTP_POST, handleDeleteSchedule);
     server.on("/schedules/edit", HTTP_POST, handleEditSchedule); // Added edit route
+    server.on("/send-time", HTTP_POST, handleSendTime); // Added send-time route
     server.begin();
     Serial.println("Web server started");
 }

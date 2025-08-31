@@ -78,6 +78,23 @@ footer {
   margin: 30px 0;
 }
 
+#send-time-btn {
+  margin-top: 15px;
+  background: #2196f3;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+  font-size: 1em;
+}
+
+#send-time-btn:hover {
+  opacity: 0.8;
+  transform: scale(1.05);
+}
+
 #device-controls {
   margin: 30px 0;
 }

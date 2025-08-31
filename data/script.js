@@ -58,6 +58,48 @@ function toggleBell() {
     });
 }
 
+function sendTimeToNodeMCU() {
+  const now = new Date();
+  const timeString = now.toLocaleTimeString();
+  const dateString = now.toLocaleDateString();
+  const fullDateTime = `${dateString} ${timeString}`;
+  
+  console.log("Sending time to NodeMCU:", fullDateTime);
+  
+  fetch("/send-time", { 
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ 
+      time: fullDateTime,
+      timestamp: now.getTime()
+    }),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        console.log("Time sent successfully to NodeMCU");
+        // Show a brief success message
+        const button = document.getElementById("send-time-btn");
+        const originalText = button.textContent;
+        button.textContent = "Time Sent!";
+        button.style.background = "#4caf50";
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.style.background = "";
+        }, 2000);
+      } else {
+        console.error("Error sending time:", data.message);
+        alert("Error sending time to NodeMCU: " + data.message);
+      }
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      alert("Error sending time to NodeMCU");
+    });
+}
+
 // Update time immediately when page loads
 updateTime();
 
