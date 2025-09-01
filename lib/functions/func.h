@@ -37,6 +37,37 @@ void controlDevices()
     bell.loop();
 }
 
+void applySavedConfig()
+{
+    StaticJsonDocument<256> cfg;
+    File f = LittleFS.open("/config.json", "r");
+    if (f)
+    {
+        String c = f.readString();
+        f.close();
+        DeserializationError e = deserializeJson(cfg, c);
+        if (e)
+        {
+            cfg.clear();
+        }
+    }
+
+    // Bell duration
+    unsigned long bellDurationMs = cfg.containsKey("bellDurationMs") ? cfg["bellDurationMs"].as<unsigned long>() : 3000UL;
+    bell.setDuration(bellDurationMs);
+
+    // LED last state
+    bool ledOn = cfg.containsKey("ledOn") ? cfg["ledOn"].as<bool>() : false;
+    if (ledOn)
+    {
+        led.on();
+    }
+    else
+    {
+        led.off();
+    }
+}
+
 void showTime()
 {
     DateTime now = rtc.now();

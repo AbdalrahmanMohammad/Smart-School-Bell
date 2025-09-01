@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 #include <Toggelable.h>
+#include <LittleFS.h>
+#include <ArduinoJson.h>
 
 class LED : public Togglable
 {
@@ -56,11 +58,45 @@ public:
     {
         digitalWrite(pin, HIGH);
         state = HIGH;
+        // Persist LED state
+        StaticJsonDocument<256> cfg;
+        File f = LittleFS.open("/config.json", "r");
+        if (f)
+        {
+            String c = f.readString();
+            f.close();
+            DeserializationError e = deserializeJson(cfg, c);
+            if (e) cfg.clear();
+        }
+        cfg["ledOn"] = true;
+        File wf = LittleFS.open("/config.json", "w");
+        if (wf)
+        {
+            serializeJson(cfg, wf);
+            wf.close();
+        }
     }
     virtual void off() override
     {
         digitalWrite(pin, LOW);
         state = LOW;
+        // Persist LED state
+        StaticJsonDocument<256> cfg;
+        File f = LittleFS.open("/config.json", "r");
+        if (f)
+        {
+            String c = f.readString();
+            f.close();
+            DeserializationError e = deserializeJson(cfg, c);
+            if (e) cfg.clear();
+        }
+        cfg["ledOn"] = false;
+        File wf = LittleFS.open("/config.json", "w");
+        if (wf)
+        {
+            serializeJson(cfg, wf);
+            wf.close();
+        }
     }
 
     virtual bool isOn()

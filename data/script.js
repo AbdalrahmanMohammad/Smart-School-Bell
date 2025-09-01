@@ -115,6 +115,9 @@ setInterval(updateDeviceStatus, 1000);
 // Load schedules immediately when page loads
 loadSchedules();
 
+// Load config immediately
+loadConfig();
+
 // Update schedules every 5 seconds
 // setInterval(loadSchedules, 5000);
 
@@ -130,6 +133,38 @@ function loadSchedules() {
       document.getElementById("schedules-list").innerHTML =
         "<p>Error loading schedules</p>";
     });
+}
+
+function loadConfig() {
+  fetch('/config')
+    .then(res => res.json())
+    .then(cfg => {
+      const seconds = Math.round((cfg.bellDurationMs || 3000) / 1000);
+      const input = document.getElementById('bell-duration');
+      if (input) input.value = seconds;
+    })
+    .catch(() => {
+      const input = document.getElementById('bell-duration');
+      if (input) input.value = 3;
+    });
+}
+
+function saveBellDuration() {
+  const input = document.getElementById('bell-duration');
+  if (!input) return;
+  let seconds = parseInt(input.value, 10);
+  if (isNaN(seconds) || seconds < 0) seconds = 0;
+  if (seconds > 60) seconds = 60;
+  fetch('/config/bell-duration', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bellDurationSeconds: seconds })
+  })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.success) alert('Failed to save');
+    })
+    .catch(() => alert('Failed to save'));
 }
 
 function displaySchedules(schedules) {

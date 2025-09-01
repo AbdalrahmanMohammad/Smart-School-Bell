@@ -89,6 +89,96 @@ void handleLEDToggle()
     server.send(200, "application/json", json);
 }
 
+// ===== Config helpers =====
+static const char* CONFIG_PATH = "/config.json";
+
+static void loadConfigOrDefaults(StaticJsonDocument<256>& cfg)
+{
+    cfg.clear();
+    File f = LittleFS.open(CONFIG_PATH, "r");
+    if (!f)
+    {
+        // defaults
+        cfg["bellDurationMs"] = 3000; // 3s default
+        cfg["ledOn"] = false;
+        return;
+    }
+    String content = f.readString();
+    f.close();
+    DeserializationError err = deserializeJson(cfg, content);
+    if (err)
+    {
+        cfg.clear();
+        cfg["bellDurationMs"] = 3000;
+        cfg["ledOn"] = false;
+    }
+}
+
+static bool saveConfig(const StaticJsonDocument<256>& cfg)
+{
+    File f = LittleFS.open(CONFIG_PATH, "w");
+    if (!f) return false;
+    serializeJson(cfg, f);
+    f.close();
+    return true;
+}
+
+void handleGetConfig()
+{
+    StaticJsonDocument<256> cfg;
+    loadConfigOrDefaults(cfg);
+    String json;
+    serializeJson(cfg, json);
+    server.send(200, "application/json", json);
+}
+
+void handleUpdateBellDuration()
+{
+    if (!server.hasArg("plain"))
+    {
+        server.send(400, "application/json", "{\"success\":false,\"message\":\"No data\"}");
+        return;
+    }
+
+    StaticJsonDocument<128> body;
+    DeserializationError err = deserializeJson(body, server.arg("plain"));
+    if (err)
+    {
+        server.send(400, "application/json", "{\"success\":false,\"message\":\"Bad JSON\"}");
+        return;
+    }
+
+    // Accept either bellDurationMs or seconds
+    unsigned long bellDurationMs = 0;
+    if (body.containsKey("bellDurationMs"))
+    {
+        bellDurationMs = body["bellDurationMs"].as<unsigned long>();
+    }
+    else if (body.containsKey("bellDurationSeconds"))
+    {
+        bellDurationMs = body["bellDurationSeconds"].as<unsigned long>() * 1000UL;
+    }
+    else
+    {
+        server.send(400, "application/json", "{\"success\":false,\"message\":\"Missing duration\"}");
+        return;
+    }
+
+    // Clamp to a reasonable upper bound (e.g., 60s)
+    if (bellDurationMs > 60000UL) bellDurationMs = 60000UL;
+
+    // Persist
+    StaticJsonDocument<256> cfg;
+    loadConfigOrDefaults(cfg);
+    cfg["bellDurationMs"] = bellDurationMs;
+    saveConfig(cfg);
+
+    // Apply immediately
+    bell.setDuration(bellDurationMs);
+
+    server.send(200, "application/json", "{\"success\":true}");
+}
+
 void handleBellToggle()
 {
     File file = LittleFS.open("/schedules.json", "r");
@@ -479,6 +569,10 @@ void WifiSetup()
     server.on("/schedules/delete", HTTP_POST, handleDeleteSchedule);
     server.on("/schedules/edit", HTTP_POST, handleEditSchedule); // Added edit route
     server.on("/send-time", HTTP_POST, handleSendTime); // Added send-time route
+
+    // Config endpoints
+    server.on("/config", handleGetConfig);
+    server.on("/config/bell-duration", HTTP_POST, handleUpdateBellDuration);
     server.begin();
     Serial.println("Web server started");
 }

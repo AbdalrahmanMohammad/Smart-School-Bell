@@ -7,6 +7,7 @@ void setup()
   initLittleFS();
   led.init();
   bell.init();
+  applySavedConfig();
   WifiSetup();
   RtcSetup();
 }

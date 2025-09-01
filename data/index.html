@@ -31,6 +31,15 @@
       </button>
     </div>
   </div>
+  
+  <div id="config-panel">
+    <h2>Bell Settings</h2>
+    <div class="form-group">
+      <label for="bell-duration">Bell Duration (seconds):</label>
+      <input type="number" id="bell-duration" min="0" max="60" step="1" value="3">
+      <button class="control-btn" onclick="saveBellDuration()">Save</button>
+    </div>
+  </div>
   <!-- /////////////////////////// -->
   <div id="alarm-schedules">
     <h2>Alarm Schedules</h2>
