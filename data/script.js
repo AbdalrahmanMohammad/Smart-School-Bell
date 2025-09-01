@@ -344,19 +344,19 @@ function editAlarm(index) {
         <label>Days:</label>
         <div class="edit-day-checkboxes">
           <input type="checkbox" id="edit-day-0-${index}" value="0" ${currentDays.includes(0) ? 'checked' : ''}>
-          <label for="edit-day-0-${index}">Sun</label>
+          <label for="edit-day-0-${index}">Sat</label>
           <input type="checkbox" id="edit-day-1-${index}" value="1" ${currentDays.includes(1) ? 'checked' : ''}>
-          <label for="edit-day-1-${index}">Mon</label>
+          <label for="edit-day-1-${index}">Sun</label>
           <input type="checkbox" id="edit-day-2-${index}" value="2" ${currentDays.includes(2) ? 'checked' : ''}>
-          <label for="edit-day-2-${index}">Tue</label>
+          <label for="edit-day-2-${index}">Mon</label>
           <input type="checkbox" id="edit-day-3-${index}" value="3" ${currentDays.includes(3) ? 'checked' : ''}>
-          <label for="edit-day-3-${index}">Wed</label>
+          <label for="edit-day-3-${index}">Tue</label>
           <input type="checkbox" id="edit-day-4-${index}" value="4" ${currentDays.includes(4) ? 'checked' : ''}>
-          <label for="edit-day-4-${index}">Thu</label>
+          <label for="edit-day-4-${index}">Wed</label>
           <input type="checkbox" id="edit-day-5-${index}" value="5" ${currentDays.includes(5) ? 'checked' : ''}>
-          <label for="edit-day-5-${index}">Fri</label>
+          <label for="edit-day-5-${index}">Thu</label>
           <input type="checkbox" id="edit-day-6-${index}" value="6" ${currentDays.includes(6) ? 'checked' : ''}>
-          <label for="edit-day-6-${index}">Sat</label>
+          <label for="edit-day-6-${index}">Fri</label>
         </div>
       </div>
       
