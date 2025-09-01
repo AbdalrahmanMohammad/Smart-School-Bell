@@ -60,11 +60,20 @@ function toggleBell() {
 
 function sendTimeToNodeMCU() {
   const now = new Date();
-  const timeString = now.toLocaleTimeString();
-  const dateString = now.toLocaleDateString();
-  const fullDateTime = `${dateString} ${timeString}`;
   
-  console.log("Sending time to NodeMCU:", fullDateTime);
+  // Format time in local timezone (YYYY-MM-DDTHH:MM:SS)
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  
+  const timeString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  const timestamp = now.getTime();
+  
+  console.log("Sending time to NodeMCU:", timeString, "timestamp:", timestamp);
+  console.log("Local timezone offset:", now.getTimezoneOffset(), "minutes");
   
   fetch("/send-time", { 
     method: "POST",
@@ -72,8 +81,8 @@ function sendTimeToNodeMCU() {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ 
-      time: fullDateTime,
-      timestamp: now.getTime()
+      time: timeString,
+      timestamp: timestamp
     }),
   })
     .then((response) => response.json())

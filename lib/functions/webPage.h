@@ -436,7 +436,7 @@ void handleEditSchedule()
     
     // Get schedules array and validate index
     JsonArray schedules = schedulesDoc["schedules"];
-    if (index < 0 || index >= schedules.size())
+    if (index < 0 || index >= (int)schedules.size())
     {
         Serial.println("Error: Invalid schedule index");
         server.send(400, "application/json", "{\"success\":false}");
@@ -478,70 +478,59 @@ void handleEditSchedule()
 
 void handleSendTime()
 {
-    Serial.println("=== handleSendTime() START ===");
-    
     // Check if we have POST data
     if (!server.hasArg("plain"))
     {
-        Serial.println("❌ No POST data received");
         server.send(400, "application/json", "{\"success\":false,\"message\":\"No data received\"}");
         return;
     }
     
-    Serial.println("✅ Step 1: Got POST data");
-    
     // Get the raw JSON data
     String jsonData = server.arg("plain");
-    Serial.print("📥 Raw JSON data: ");
-    Serial.println(jsonData);
     
     // Parse the JSON data
-    Serial.println("🔄 Step 2: Parsing JSON data");
-    StaticJsonDocument<256> doc;
+    StaticJsonDocument<512> doc;
     DeserializationError error = deserializeJson(doc, jsonData);
     
     if (error)
     {
-        Serial.print("❌ Step 2 FAILED: Failed to parse JSON - ");
-        Serial.println(error.c_str());
         server.send(400, "application/json", "{\"success\":false,\"message\":\"Invalid JSON format\"}");
         return;
     }
     
-    Serial.println("✅ Step 2: JSON parsed successfully");
-    
     // Extract time data
     const char* timeString = doc["time"];
-    long timestamp = doc["timestamp"];
     
-    Serial.print("🕐 Received time: ");
-    Serial.println(timeString);
-    Serial.print("⏰ Timestamp: ");
-    Serial.println(timestamp);
+    // Parse ISO time string directly
+    // Format: "2025-09-01T13:30:55" (local timezone format)
+    if (strlen(timeString) < 19) {
+        server.send(400, "application/json", "{\"success\":false,\"message\":\"Invalid time format\"}");
+        return;
+    }
     
-    // Serial print the time information
-    Serial.println("📡 === PHONE TIME RECEIVED ===");
-    Serial.print("📱 Phone Time: ");
-    Serial.println(timeString);
-    Serial.print("🕒 Unix Timestamp: ");
-    Serial.println(timestamp);
-    Serial.println("📡 === END PHONE TIME ===");
+    // Extract year, month, day, hour, minute, second from ISO string
+    int year = atoi(timeString);
+    int month = atoi(timeString + 5);
+    int day = atoi(timeString + 8);
+    int hour = atoi(timeString + 11);
+    int minute = atoi(timeString + 14);
+    int second = atoi(timeString + 17);
+    
+    // Create DateTime object
+    DateTime newTime(year, month, day, hour, minute, second);
+    
+    // Set the RTC
+    rtc.adjust(newTime);
     
     // Send success response
-    Serial.println("🔄 Step 3: Sending success response");
     StaticJsonDocument<100> response;
     response["success"] = true;
-    response["message"] = "Time received and printed to serial";
+    response["message"] = "RTC time set successfully";
     
     String responseJson;
     serializeJson(response, responseJson);
-    Serial.print("📤 Response: ");
-    Serial.println(responseJson);
     
     server.send(200, "application/json", responseJson);
-    Serial.println("✅ Step 3: Response sent successfully");
-    
-    Serial.println("=== handleSendTime() END ===");
 }
 
 void WifiSetup()
