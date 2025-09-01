@@ -129,292 +129,190 @@ void handleSchedules()
 
 void handleAddSchedule()
 {
-    Serial.println("=== handleAddSchedule() START ===");
-    
     if (server.hasArg("plain"))
     {
         String jsonData = server.arg("plain");
-        Serial.println("✅ Step 1: Received POST data");
-        Serial.print("📥 Raw JSON data: ");
-        Serial.println(jsonData);
+        Serial.println("Adding new schedule...");
         
         // Parse the new schedule
-        Serial.println("🔄 Step 2: Parsing new schedule JSON");
         StaticJsonDocument<1024> newScheduleDoc;
         DeserializationError error = deserializeJson(newScheduleDoc, jsonData);
         
         if (error)
         {
-            Serial.print("❌ Step 2 FAILED: Failed to parse new schedule - ");
-            Serial.println(error.c_str());
+            Serial.println("Error: Failed to parse schedule JSON");
             server.send(400, "application/json", "{\"success\":false,\"message\":\"Invalid JSON format\"}");
-            Serial.println("=== handleAddSchedule() END (ERROR) ===");
             return;
         }
-        Serial.println("✅ Step 2: New schedule parsed successfully");
-        
-        // Debug: Print the parsed schedule
-        Serial.print("📋 Parsed schedule contents: ");
-        serializeJson(newScheduleDoc, Serial);
-        Serial.println();
         
         // Read current schedules
-        Serial.println("🔄 Step 3: Reading existing schedules file");
         File file = LittleFS.open("/schedules.json", "r");
         StaticJsonDocument<4096> schedulesDoc;
         
         if (file)
         {
-            Serial.println("✅ Step 3a: Existing schedules file found");
             String currentJson = file.readString();
             file.close();
-            Serial.print("📄 Current file contents: ");
-            Serial.println(currentJson);
             
-            Serial.println("🔄 Step 3b: Parsing existing schedules");
             error = deserializeJson(schedulesDoc, currentJson);
             if (error)
             {
-                Serial.print("⚠️ Step 3b WARNING: Failed to parse existing schedules - ");
-                Serial.println(error.c_str());
-                Serial.println("🔄 Creating fresh schedules structure");
-                // If existing file is corrupted, start fresh
+                Serial.println("Warning: Corrupted schedules file, creating fresh");
                 schedulesDoc.clear();
                 schedulesDoc.createNestedArray("schedules");
-            }
-            else
-            {
-                Serial.println("✅ Step 3b: Existing schedules parsed successfully");
             }
         }
         else
         {
-            Serial.println("ℹ️ Step 3a: No existing schedules file found, creating new structure");
             // File doesn't exist, create new structure
             schedulesDoc.createNestedArray("schedules");
         }
         
         // Add the new schedule
-        Serial.println("🔄 Step 4: Adding new schedule to array");
         JsonArray schedules = schedulesDoc["schedules"];
-        Serial.print("📊 Current schedules count: ");
-        Serial.println(schedules.size());
-        
         JsonObject newSchedule = schedules.createNestedObject();
-        Serial.println("✅ Step 4a: Created new schedule object in array");
         
         // Copy all fields from the new schedule
-        Serial.println("🔄 Step 4b: Copying fields from new schedule");
-        int fieldCount = 0;
         for (JsonPair kv : newScheduleDoc.as<JsonObject>())
         {
-            Serial.print("📝 Copying field: ");
-            Serial.print(kv.key().c_str());
-            Serial.print(" = ");
-            serializeJson(kv.value(), Serial);
-            Serial.println();
-            
             newSchedule[kv.key()] = kv.value();
-            fieldCount++;
         }
-        Serial.print("✅ Step 4b: Copied ");
-        Serial.print(fieldCount);
-        Serial.println(" fields");
-        
-        Serial.print("📊 Final schedules count: ");
-        Serial.println(schedules.size());
         
         // Write back to file
-        Serial.println("🔄 Step 5: Writing updated schedules to file");
         File writeFile = LittleFS.open("/schedules.json", "w");
         if (writeFile)
         {
-            Serial.println("✅ Step 5a: File opened for writing");
-            String updatedJson;
-            serializeJson(schedulesDoc, updatedJson);
-            Serial.print("📄 Final JSON to write: ");
-            Serial.println(updatedJson);
-            
-            writeFile.print(updatedJson);
+            serializeJson(schedulesDoc, writeFile);
             writeFile.close();
-            Serial.println("✅ Step 5b: File written and closed successfully");
             
-            // Create response
-            Serial.println("🔄 Step 6: Creating success response");
-            StaticJsonDocument<100> response;
-            response["success"] = true;
-            
-            String responseJson;
-            serializeJson(response, responseJson);
-            Serial.print("📤 Sending response: ");
-            Serial.println(responseJson);
-            
-            server.send(200, "application/json", responseJson);
-            Serial.println("✅ Step 6: Response sent successfully");
+            Serial.println("Schedule added successfully");
+            server.send(200, "application/json", "{\"success\":true}");
         }
         else
         {
-            Serial.println("❌ Step 5 FAILED: Failed to open schedules file for writing");
+            Serial.println("Error: Failed to write schedules file");
             server.send(500, "application/json", "{\"success\":false,\"message\":\"Failed to write file\"}");
         }
     }
     else
     {
-        Serial.println("❌ Step 1 FAILED: No data received in POST request");
+        Serial.println("Error: No schedule data received");
         server.send(400, "application/json", "{\"success\":false,\"message\":\"No data received\"}");
     }
-    
-    Serial.println("=== handleAddSchedule() END ===");
 }
 
 void handleDeleteSchedule()
 {
-    Serial.println("=== handleDeleteSchedule() START ===");
+    Serial.println("Delete request received");
     
     // Check if we have POST data
     if (!server.hasArg("plain"))
     {
-        Serial.println("❌ No POST data");
+        Serial.println("Error: No POST data");
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
     
-    Serial.println("✅ Step 1: Got POST data");
-    
-    // Get the raw data
+    // Get and parse the request data
     String jsonData = server.arg("plain");
-    Serial.print("📥 Length: ");
-    Serial.println(jsonData.length());
+    Serial.print("Delete request data: ");
+    Serial.println(jsonData);
     
-    // Parse the request with tiny buffer
-    Serial.println("🔄 Step 2: Parse request");
     StaticJsonDocument<64> requestDoc;
     DeserializationError error = deserializeJson(requestDoc, jsonData);
     
     if (error)
     {
-        Serial.println("❌ Parse failed");
+        Serial.print("Parse error: ");
+        Serial.println(error.c_str());
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
     
-    Serial.println("✅ Step 2: Parsed");
-    
-    // Get the index
+    // Get the index to delete
     int index = requestDoc["index"];
-    Serial.print("🎯 Index: ");
+    Serial.print("Index to delete: ");
     Serial.println(index);
     
-    // Open file
-    Serial.println("🔄 Step 3: Open file");
+    // Open and read schedules file
     File file = LittleFS.open("/schedules.json", "r");
     if (!file)
     {
-        Serial.println("❌ File not found");
+        Serial.println("Error: File not found");
         server.send(404, "application/json", "{\"success\":false}");
         return;
     }
     
-    Serial.println("✅ Step 3: File opened");
-    
-    // Read file content
     String fileContent = file.readString();
     file.close();
-    
-    Serial.print("📏 Size: ");
+    Serial.print("File size: ");
     Serial.println(fileContent.length());
     
     // Parse schedules
-    Serial.println("🔄 Step 4: Parse schedules");
     StaticJsonDocument<2048> schedulesDoc;
     error = deserializeJson(schedulesDoc, fileContent);
     
     if (error)
     {
-        Serial.println("❌ Schedule parse failed");
+        Serial.print("Schedule parse error: ");
+        Serial.println(error.c_str());
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
     
-    Serial.println("✅ Step 4: Schedules parsed");
-    
-    // Get schedules array
+    // Get schedules array and validate index
     JsonArray schedules = schedulesDoc["schedules"];
     int count = schedules.size();
-    Serial.print("📊 Count: ");
+    Serial.print("Total schedules: ");
     Serial.println(count);
     
-    // Validate index
     if (index < 0 || index >= count)
     {
-        Serial.println("❌ Invalid index");
+        Serial.println("Error: Invalid index");
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
     
-    Serial.println("✅ Step 5: Index valid");
-    
-    // Remove the schedule
-    Serial.println("🔄 Step 6: Remove schedule");
+    // Remove the schedule and write back to file
     schedules.remove(index);
-    Serial.println("✅ Step 6: Removed");
+    Serial.println("Schedule removed from array");
     
-    // Write back to file
-    Serial.println("🔄 Step 7: Write file");
     File writeFile = LittleFS.open("/schedules.json", "w");
     if (!writeFile)
     {
-        Serial.println("❌ Write failed");
+        Serial.println("Error: Failed to open file for writing");
         server.send(500, "application/json", "{\"success\":false}");
         return;
     }
     
-    // Write directly to file
     serializeJson(schedulesDoc, writeFile);
     writeFile.close();
     
-    Serial.println("✅ Step 7: Written");
-    
-    // Send response
-    Serial.println("🔄 Step 8: Send response");
+    Serial.println("Schedule deleted successfully");
     server.send(200, "application/json", "{\"success\":true}");
-    Serial.println("✅ Step 8: Sent");
-    
-    Serial.println("=== handleDeleteSchedule() END ===");
 }
 
 void handleEditSchedule()
 {
-    Serial.println("=== handleEditSchedule() START ===");
-    
     // Check if we have POST data
     if (!server.hasArg("plain"))
     {
-        Serial.println("❌ No POST data");
+        Serial.println("Error: No edit data received");
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
     
-    Serial.println("✅ Step 1: Got POST data");
-    
-    // Get the raw data
+    // Get and parse the request data
     String jsonData = server.arg("plain");
-    Serial.print("📥 Length: ");
-    Serial.println(jsonData.length());
-    
-    // Parse the request with minimal buffer
-    Serial.println("🔄 Step 2: Parse request");
     StaticJsonDocument<256> requestDoc;
     DeserializationError error = deserializeJson(requestDoc, jsonData);
     
     if (error)
     {
-        Serial.println("❌ Parse failed");
+        Serial.println("Error: Failed to parse edit request");
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
-    
-    Serial.println("✅ Step 2: Parsed");
     
     // Get the edit data
     int index = requestDoc["index"];
@@ -422,66 +320,40 @@ void handleEditSchedule()
     JsonArray newDays = requestDoc["days"];
     bool newEnabled = requestDoc["enabled"];
     
-    Serial.print("🎯 Index: ");
-    Serial.println(index);
-    Serial.print("🕐 New time: ");
-    Serial.println(newTime);
-    Serial.print("📅 Days count: ");
-    Serial.println(newDays.size());
-    Serial.print("🔔 Enabled: ");
-    Serial.println(newEnabled ? "true" : "false");
     
-    // Open file
-    Serial.println("🔄 Step 3: Open file");
+    // Open and read schedules file
     File file = LittleFS.open("/schedules.json", "r");
     if (!file)
     {
-        Serial.println("❌ File not found");
+        Serial.println("Error: Schedules file not found");
         server.send(404, "application/json", "{\"success\":false}");
         return;
     }
     
-    Serial.println("✅ Step 3: File opened");
-    
-    // Read file content
     String fileContent = file.readString();
     file.close();
     
-    Serial.print("📏 Size: ");
-    Serial.println(fileContent.length());
-    
-    // Parse schedules with smaller buffer
-    Serial.println("🔄 Step 4: Parse schedules");
+    // Parse schedules
     StaticJsonDocument<1024> schedulesDoc;
     error = deserializeJson(schedulesDoc, fileContent);
     
     if (error)
     {
-        Serial.println("❌ Schedule parse failed");
+        Serial.println("Error: Failed to parse schedules file");
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
     
-    Serial.println("✅ Step 4: Schedules parsed");
-    
-    // Get schedules array
+    // Get schedules array and validate index
     JsonArray schedules = schedulesDoc["schedules"];
-    int count = schedules.size();
-    Serial.print("📊 Count: ");
-    Serial.println(count);
-    
-    // Validate index
-    if (index < 0 || index >= count)
+    if (index < 0 || index >= schedules.size())
     {
-        Serial.println("❌ Invalid index");
+        Serial.println("Error: Invalid schedule index");
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
-    
-    Serial.println("✅ Step 5: Index valid");
     
     // Update the schedule
-    Serial.println("🔄 Step 6: Update schedule");
     JsonObject schedule = schedules[index];
     
     // Update time
@@ -498,30 +370,20 @@ void handleEditSchedule()
     // Update enabled status
     schedule["enabled"] = newEnabled;
     
-    Serial.println("✅ Step 6: Updated");
-    
     // Write back to file
-    Serial.println("🔄 Step 7: Write file");
     File writeFile = LittleFS.open("/schedules.json", "w");
     if (!writeFile)
     {
-        Serial.println("❌ Write failed");
+        Serial.println("Error: Failed to write schedules file");
         server.send(500, "application/json", "{\"success\":false}");
         return;
     }
     
-    // Write directly to file
     serializeJson(schedulesDoc, writeFile);
     writeFile.close();
     
-    Serial.println("✅ Step 7: Written");
-    
-    // Send response
-    Serial.println("🔄 Step 8: Send response");
+    Serial.println("Schedule edited successfully");
     server.send(200, "application/json", "{\"success\":true}");
-    Serial.println("✅ Step 8: Sent");
-    
-    Serial.println("=== handleEditSchedule() END ===");
 }
 
 void handleSendTime()
