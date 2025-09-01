@@ -150,7 +150,7 @@ function displaySchedules(schedules) {
       <div class="schedule-item" id="schedule-${index}">
         <div class="schedule-info">
           <div class="schedule-time-row">
-            <div class="schedule-time" id="time-display-${index}">${schedule.time}</div>
+            <div class="schedule-time" id="time-display-${index}">${schedule.time} <span class="type-badge">${(schedule.type || 'bell').toUpperCase()}</span></div>
             <div class="schedule-status ${statusClass}" onclick="toggleAlarmStatus(${index})">
               <div class="toggle-switch ${statusClass}"></div>
             </div>
@@ -201,8 +201,11 @@ function addAlarm() {
     return;
   }
 
+  const type = document.getElementById("alarm-type") ? document.getElementById("alarm-type").value : "bell";
+
   const newAlarm = {
     time: time,
+    type: type,
     days: selectedDays,
     enabled: true,
   };
@@ -219,6 +222,9 @@ function addAlarm() {
       if (data.success) {
         // Clear form
         document.getElementById("alarm-time").value = "";
+        if (document.getElementById("alarm-type")) {
+          document.getElementById("alarm-type").value = "bell";
+        }
         document
           .querySelectorAll('.day-checkboxes input[type="checkbox"]')
           .forEach((checkbox) => {
@@ -281,7 +287,7 @@ function editAlarm(index) {
   const statusDisplay = scheduleItem.querySelector('.schedule-status');
   
   // Get current schedule data
-  const currentTime = timeDisplay.textContent;
+  const currentTime = timeDisplay.textContent.split(' ')[0]; // Extract time before type badge
   const currentDays = Array.from(daysDisplay.querySelectorAll('.days.selected')).map(day => {
     const dayText = day.textContent;
     const dayNames = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];

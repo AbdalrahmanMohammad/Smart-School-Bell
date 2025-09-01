@@ -3,17 +3,20 @@
     {
       "time": "08:00",
       "days": [0, 1, 2, 3, 4],
-      "enabled": true
+      "enabled": true,
+      "type":"bell"
     },
     {
       "time": "12:00",
       "days": [0, 1, 2, 3, 4],
-      "enabled": false
+      "enabled": false,
+      "type":"bell"
     },
     {
       "time": "14:30",
       "days": [0, 2, 4],
-      "enabled": true
+      "enabled": true,
+      "type":"bell"
     }
   ]
 }
