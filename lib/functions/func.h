@@ -1,4 +1,9 @@
-#include <webPage.h>
+// Global variable to track last triggered time to prevent multiple triggers
+String lastTriggeredTime = "";
+
+// Global variables for schedule caching
+DynamicJsonDocument* cachedSchedulesDoc = nullptr;
+bool schedulesCacheValid = false;
 
 void initLittleFS()
 {
@@ -31,10 +36,134 @@ void RtcSetup()
     // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 }
 
+// Function to load schedules into cache
+void loadSchedulesToCache() {
+    // Free existing cache if it exists
+    if (cachedSchedulesDoc != nullptr) {
+        delete cachedSchedulesDoc;
+        cachedSchedulesDoc = nullptr;
+    }
+    
+    // Read schedules from flash memory
+    File file = LittleFS.open("/schedules.json", "r");
+    if (!file) {
+        schedulesCacheValid = false;
+        Serial.println("No schedules file found");
+        return; // No schedules file
+    }
+    
+    String jsonData = file.readString();
+    file.close();
+    
+    // Allocate new document on heap
+    cachedSchedulesDoc = new DynamicJsonDocument(16384);
+    DeserializationError error = deserializeJson(*cachedSchedulesDoc, jsonData);
+    
+    if (error) {
+        Serial.println("Failed to parse schedules.json");
+        delete cachedSchedulesDoc;
+        cachedSchedulesDoc = nullptr;
+        schedulesCacheValid = false;
+        return;
+    }
+    
+    schedulesCacheValid = true;
+    Serial.println("Schedules loaded to cache successfully");
+}
+
+// Function to initialize schedules cache (call in setup)
+void initSchedulesCache() {
+    loadSchedulesToCache();
+}
+
+void checkSchedules()
+{
+    if(!led.isOn()) {
+        return;
+    }
+    
+    // Check if cache is valid
+    if (!schedulesCacheValid || cachedSchedulesDoc == nullptr) {
+        Serial.println("Schedules cache invalid, reloading...");
+        loadSchedulesToCache();
+        return; // No valid schedules to check
+    }
+    
+    // Get current time
+    DateTime now = rtc.now();
+    int currentDayOfWeek = now.dayOfTheWeek(); // 0 = Sunday, 1 = Monday, etc.
+    currentDayOfWeek++;
+    if (currentDayOfWeek == 7) currentDayOfWeek = 0; 
+    String currentTime = "";
+    if (now.hour() < 10) currentTime += "0";
+    currentTime += String(now.hour());
+    currentTime += ":";
+    if (now.minute() < 10) currentTime += "0";
+    currentTime += String(now.minute());
+    
+    Serial.println("Current time: " + currentTime + " Day of week: " + String(currentDayOfWeek));
+    // Prevent multiple triggers in the same minute
+    if (currentTime == lastTriggeredTime)
+    {
+        return;
+    }
+    
+    // Check each schedule using cached document
+    JsonArray schedules = (*cachedSchedulesDoc)["schedules"];
+    for (JsonObject schedule : schedules)
+    {
+        // Check if schedule is enabled
+        if (!schedule["enabled"].as<bool>())
+        {
+            continue;
+        }
+        
+        // Check if current day is in the schedule
+        JsonArray days = schedule["days"];
+        bool dayMatches = false;
+        for (int day : days)
+        {
+            if (day == currentDayOfWeek)
+            {
+                dayMatches = true;
+                break;
+            }
+        }
+        
+        if (!dayMatches)
+        {
+            continue;
+        }
+        
+        // Check if current time matches schedule time
+        const char* scheduleTime = schedule["time"];
+        if (strcmp(scheduleTime, currentTime.c_str()) == 0)
+        {
+            // Time matches! Ring the bell
+            const char* type = schedule["type"];
+            if (strcmp(type, "bell") == 0)
+            {
+                Serial.print("Ringing bell at scheduled time: ");
+                Serial.println(scheduleTime);
+                bell.on();
+                lastTriggeredTime = currentTime; // Mark this time as triggered
+            }
+            else if (strcmp(type, "led") == 0)
+            {
+                Serial.print("Toggling LED at scheduled time: ");
+                Serial.println(scheduleTime);
+                led.off();
+                lastTriggeredTime = currentTime; // Mark this time as triggered
+            }
+        }
+    }
+}
+
 void controlDevices()
 {
     led.loop();
     bell.loop();
+    checkSchedules(); // Add schedule checking
 }
 
 void applySavedConfig()
@@ -90,3 +219,4 @@ void showTime()
     Serial.print(now.second(), DEC);
     Serial.println();
 }
+#include <webPage.h>

@@ -10,6 +10,7 @@ void setup()
   applySavedConfig();
   WifiSetup();
   RtcSetup();
+  initSchedulesCache(); // Load schedules once at startup
 }
 
 void loop()
