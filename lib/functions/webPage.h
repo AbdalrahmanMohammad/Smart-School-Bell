@@ -283,8 +283,16 @@ void handleAddSchedule()
             schedulesDoc.createNestedArray("schedules");
         }
 
-        // Add the new schedule
+        // Check alarm limit (50 alarms maximum)
         JsonArray schedules = schedulesDoc["schedules"];
+        if (schedules.size() >= 50)
+        {
+            dbgln("Error: Maximum number of alarms (50) reached");
+            server.send(400, "application/json", "{\"success\":false,\"message\":\"Maximum number of alarms (50) reached. Please delete some alarms before adding new ones.\"}");
+            return;
+        }
+
+        // Add the new schedule
         JsonObject newSchedule = schedules.createNestedObject();
 
         // Copy all fields from the new schedule

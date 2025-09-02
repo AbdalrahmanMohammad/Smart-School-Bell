@@ -178,6 +178,12 @@ function saveBellDuration() {
 
 function displaySchedules(schedules) {
   const container = document.getElementById("schedules-list");
+  
+  // Update alarm counter
+  const alarmCounter = document.getElementById("current-alarm-count");
+  if (alarmCounter) {
+    alarmCounter.textContent = schedules.length;
+  }
 
   if (schedules.length === 0) {
     container.innerHTML = "<p>No alarms scheduled</p>";
@@ -213,6 +219,9 @@ function displaySchedules(schedules) {
   });
 
   container.innerHTML = html;
+  
+  // Update add button state after displaying schedules
+  updateAddButtonState();
 }
 
 function getDaysHTML(selectedDays) {
@@ -226,7 +235,40 @@ function getDaysHTML(selectedDays) {
     .join("");
 }
 
+function updateAddButtonState() {
+  const addButton = document.querySelector('.add-btn');
+  const alarmCounter = document.getElementById("current-alarm-count");
+  const currentCount = parseInt(alarmCounter.textContent);
+  
+  if (currentCount >= 50) {
+    addButton.disabled = true;
+    addButton.textContent = "Maximum alarms reached (50)";
+    addButton.style.opacity = "0.6";
+    addButton.style.cursor = "not-allowed";
+    alarmCounter.style.color = "#f44336"; // Red when limit reached
+  } else if (currentCount >= 45) {
+    addButton.disabled = false;
+    addButton.textContent = "Add Alarm";
+    addButton.style.opacity = "1";
+    addButton.style.cursor = "pointer";
+    alarmCounter.style.color = "#ff9800"; // Orange when approaching limit
+  } else {
+    addButton.disabled = false;
+    addButton.textContent = "Add Alarm";
+    addButton.style.opacity = "1";
+    addButton.style.cursor = "pointer";
+    alarmCounter.style.color = "#4caf50"; // Green when well under limit
+  }
+}
+
 function addAlarm() {
+  // Check if we've reached the limit
+  const currentCount = parseInt(document.getElementById("current-alarm-count").textContent);
+  if (currentCount >= 50) {
+    alert("Maximum number of alarms (50) reached. Please delete some alarms before adding new ones.");
+    return;
+  }
+
   const time = document.getElementById("alarm-time").value;
 
   if (!time) {

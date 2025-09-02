@@ -700,6 +700,41 @@ footer {
   opacity: 0.8;
 }
 
+.add-btn:disabled {
+  background: #cccccc;
+  color: #666666;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.add-btn:disabled:hover {
+  opacity: 0.6;
+  transform: none;
+}
+
+/* Alarm Counter Styles */
+#alarm-counter {
+  text-align: center;
+  margin: 15px 0;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  max-width: 200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#alarm-counter p {
+  margin: 0;
+  font-size: 1.1em;
+  font-weight: bold;
+}
+
+#current-alarm-count {
+  color: #4caf50;
+  font-weight: bold;
+}
+
 
 
 /* Config Panel Styles */
