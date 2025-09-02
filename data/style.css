@@ -131,6 +131,25 @@ footer {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  position: relative;
+}
+
+.schedule-index {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  background: #2196f3;
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9em;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+  z-index: 1;
 }
 
 @media (max-width: 480px) {
@@ -138,6 +157,14 @@ footer {
     width: 90%;
     margin: 10px auto;
     padding: 20px;
+  }
+  
+  .schedule-index {
+    width: 25px;
+    height: 25px;
+    font-size: 0.8em;
+    top: -5px;
+    left: -5px;
   }
 }
 
@@ -714,6 +741,7 @@ footer {
   background: rgba(255, 255, 255, 0.9);
   color: #333;
   margin-bottom: 10px;
+  box-sizing: border-box;
 }
 
 #config-panel .form-group button {
@@ -753,6 +781,8 @@ footer {
   
   #config-panel .form-group input[type="number"] {
     max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
   }
 }
 

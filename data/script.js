@@ -192,6 +192,7 @@ function displaySchedules(schedules) {
 
     html += `
       <div class="schedule-item" id="schedule-${index}">
+        <div class="schedule-index">#${index + 1}</div>
         <div class="schedule-info">
           <div class="schedule-time-row">
             <div class="schedule-time" id="time-display-${index}">${schedule.time} <span class="type-badge">${(schedule.type || 'bell').toUpperCase()}</span></div>
