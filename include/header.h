@@ -22,3 +22,13 @@ RTC_DS3231 rtc;
 Timer timer(20UL);
 LED led(D7, D6);
 Bell bell(D5);
+
+#define DEBUG_SERIAL true
+
+#if DEBUG_SERIAL
+    #define dbg(...) Serial.print(__VA_ARGS__)
+    #define dbgln(...) Serial.println(__VA_ARGS__)
+#else
+    #define dbg(...)
+    #define dbgln(...)
+#endif

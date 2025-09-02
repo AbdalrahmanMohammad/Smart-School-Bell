@@ -9,17 +9,17 @@ void initLittleFS()
 {
     if (!LittleFS.begin())
     {
-        Serial.println("LittleFS initialization failed!");
+        dbgln("LittleFS initialization failed!");
         return;
     }
-    Serial.println("LittleFS initialized successfully!");
-    Serial.println("Files on LittleFS:");
+    dbgln("LittleFS initialized successfully!");
+    dbgln("Files on LittleFS:");
     Dir dir = LittleFS.openDir("/"); // Root directory
     while (dir.next())
     {
-        Serial.print(dir.fileName());
-        Serial.print("  \t");
-        Serial.println(dir.fileSize());
+        dbg(dir.fileName());
+        dbg("  \t");
+        dbgln(dir.fileSize());
     }
 }
 
@@ -29,7 +29,7 @@ void RtcSetup()
 
     if (!rtc.begin())
     {
-        Serial.println("Couldn't find RTC");
+        dbgln("Couldn't find RTC");
         while (1)
             ;
     }
@@ -48,7 +48,7 @@ void loadSchedulesToCache() {
     File file = LittleFS.open("/schedules.json", "r");
     if (!file) {
         schedulesCacheValid = false;
-        Serial.println("No schedules file found");
+        dbgln("No schedules file found");
         return; // No schedules file
     }
     
@@ -60,7 +60,7 @@ void loadSchedulesToCache() {
     DeserializationError error = deserializeJson(*cachedSchedulesDoc, jsonData);
     
     if (error) {
-        Serial.println("Failed to parse schedules.json");
+        dbgln("Failed to parse schedules.json");
         delete cachedSchedulesDoc;
         cachedSchedulesDoc = nullptr;
         schedulesCacheValid = false;
@@ -68,7 +68,7 @@ void loadSchedulesToCache() {
     }
     
     schedulesCacheValid = true;
-    Serial.println("Schedules loaded to cache successfully");
+    dbgln("Schedules loaded to cache successfully");
 }
 
 // Function to initialize schedules cache (call in setup)
@@ -84,7 +84,7 @@ void checkSchedules()
     
     // Check if cache is valid
     if (!schedulesCacheValid || cachedSchedulesDoc == nullptr) {
-        Serial.println("Schedules cache invalid, reloading...");
+        dbgln("Schedules cache invalid, reloading...");
         loadSchedulesToCache();
         return; // No valid schedules to check
     }
@@ -101,7 +101,7 @@ void checkSchedules()
     if (now.minute() < 10) currentTime += "0";
     currentTime += String(now.minute());
     
-    Serial.println("Current time: " + currentTime + " Day of week: " + String(currentDayOfWeek));
+    dbgln("Current time: " + currentTime + " Day of week: " + String(currentDayOfWeek));
     // Prevent multiple triggers in the same minute
     if (currentTime == lastTriggeredTime)
     {
@@ -143,15 +143,15 @@ void checkSchedules()
             const char* type = schedule["type"];
             if (strcmp(type, "bell") == 0)
             {
-                Serial.print("Ringing bell at scheduled time: ");
-                Serial.println(scheduleTime);
+                dbg("Ringing bell at scheduled time: ");
+                dbgln(scheduleTime);
                 bell.on();
                 lastTriggeredTime = currentTime; // Mark this time as triggered
             }
             else if (strcmp(type, "led") == 0)
             {
-                Serial.print("Toggling LED at scheduled time: ");
-                Serial.println(scheduleTime);
+                dbg("Toggling LED at scheduled time: ");
+                dbgln(scheduleTime);
                 led.off();
                 lastTriggeredTime = currentTime; // Mark this time as triggered
             }
@@ -202,21 +202,21 @@ void showTime()
     DateTime now = rtc.now();
 
     //   if (rtc.lostPower()) {
-    //   Serial.println("RTC lost power detected!");
+    //   dbgln("RTC lost power detected!");
     //   // You could reset or ask user to re-set time
     // }
 
-    Serial.print(now.year(), DEC);
-    Serial.print('/');
-    Serial.print(now.month(), DEC);
-    Serial.print('/');
-    Serial.print(now.day(), DEC);
-    Serial.print(" ");
-    Serial.print(now.hour(), DEC);
-    Serial.print(':');
-    Serial.print(now.minute(), DEC);
-    Serial.print(':');
-    Serial.print(now.second(), DEC);
-    Serial.println();
+    dbg(now.year(), DEC);
+    dbg('/');
+    dbg(now.month(), DEC);
+    dbg('/');
+    dbg(now.day(), DEC);
+    dbg(" ");
+    dbg(now.hour(), DEC);
+    dbg(':');
+    dbg(now.minute(), DEC);
+    dbg(':');
+    dbg(now.second(), DEC);
+    dbgln();
 }
 #include <webPage.h>

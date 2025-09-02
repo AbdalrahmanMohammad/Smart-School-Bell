@@ -187,17 +187,17 @@ void handleBellToggle()
     File file = LittleFS.open("/schedules.json", "r");
     if (!file)
     {
-        Serial.print("Schedules file not found, assuming no schedules");
+        dbg("Schedules file not found, assuming no schedules");
     }
     else
     {
         String jsonData = file.readString();
-        Serial.println("File schedules: " + jsonData);
+        dbgln("File schedules: " + jsonData);
         file.close();
     }
 
     // Print separator
-    Serial.println("***********");
+    dbgln("***********");
 
     // Print cached content
     if (!schedulesCacheValid || cachedSchedulesDoc == nullptr)
@@ -209,18 +209,18 @@ void handleBellToggle()
     {
         String cachedJsonData;
         serializeJson(*cachedSchedulesDoc, cachedJsonData);
-        Serial.println("Cached schedules: " + cachedJsonData);
+        dbgln("Cached schedules: " + cachedJsonData);
     }
     else
     {
-        Serial.println("No cached schedules available");
+        dbgln("No cached schedules available");
     }
 
     bell.on();
 
     StaticJsonDocument<100> doc;
     doc["bell"] = bell.isOn();
-    Serial.println("--------------------------");
+    dbgln("--------------------------");
     String json;
     serializeJson(doc, json);
     server.send(200, "application/json", json);
@@ -245,7 +245,7 @@ void handleAddSchedule()
     if (server.hasArg("plain"))
     {
         String jsonData = server.arg("plain");
-        Serial.println("Adding new schedule...");
+        dbgln("Adding new schedule...");
 
         // Parse the new schedule
         DynamicJsonDocument newScheduleDoc(1024);
@@ -253,7 +253,7 @@ void handleAddSchedule()
 
         if (error)
         {
-            Serial.println("Error: Failed to parse schedule JSON");
+            dbgln("Error: Failed to parse schedule JSON");
             server.send(400, "application/json", "{\"success\":false,\"message\":\"Invalid JSON format\"}");
             return;
         }
@@ -272,7 +272,7 @@ void handleAddSchedule()
             error = deserializeJson(schedulesDoc, currentJson);
             if (error)
             {
-                Serial.println("Warning: Corrupted schedules file, creating fresh");
+                dbgln("Warning: Corrupted schedules file, creating fresh");
                 schedulesDoc.clear();
                 schedulesDoc.createNestedArray("schedules");
             }
@@ -300,69 +300,69 @@ void handleAddSchedule()
             serializeJson(schedulesDoc, writeFile);
             writeFile.close();
 
-            Serial.println("Schedule added successfully");
+            dbgln("Schedule added successfully");
             // loadSchedulesToCache(); // not necessary, check schedules will do it since cachedSchedulesDoc == nullptr
             server.send(200, "application/json", "{\"success\":true}");
         }
         else
         {
-            Serial.println("Error: Failed to write schedules file");
+            dbgln("Error: Failed to write schedules file");
             server.send(500, "application/json", "{\"success\":false,\"message\":\"Failed to write file\"}");
         }
     }
     else
     {
-        Serial.println("Error: No schedule data received");
+        dbgln("Error: No schedule data received");
         server.send(400, "application/json", "{\"success\":false,\"message\":\"No data received\"}");
     }
 }
 
 void handleDeleteSchedule()
 {
-    Serial.println("Delete request received");
+    dbgln("Delete request received");
 
     // Check if we have POST data
     if (!server.hasArg("plain"))
     {
-        Serial.println("Error: No POST data");
+        dbgln("Error: No POST data");
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
 
     // Get and parse the request data
     String jsonData = server.arg("plain");
-    Serial.print("Delete request data: ");
-    Serial.println(jsonData);
+    dbg("Delete request data: ");
+    dbgln(jsonData);
 
     StaticJsonDocument<64> requestDoc;
     DeserializationError error = deserializeJson(requestDoc, jsonData);
 
     if (error)
     {
-        Serial.print("Parse error: ");
-        Serial.println(error.c_str());
+        dbg("Parse error: ");
+        dbgln(error.c_str());
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
 
     // Get the index to delete
     int index = requestDoc["index"];
-    Serial.print("Index to delete: ");
-    Serial.println(index);
+    dbg("Index to delete: ");
+    dbgln(index);
 
     // Open and read schedules file
     File file = LittleFS.open("/schedules.json", "r");
     if (!file)
     {
-        Serial.println("Error: File not found");
+        dbgln("Error: File not found");
         server.send(404, "application/json", "{\"success\":false}");
         return;
     }
 
     String fileContent = file.readString();
     file.close();
-    Serial.print("File size: ");
-    Serial.println(fileContent.length());
+    dbg("File size: ");
+    dbgln(fileContent.length());
 
     delete cachedSchedulesDoc; // Free existing cache
     cachedSchedulesDoc = nullptr;
@@ -373,8 +373,8 @@ void handleDeleteSchedule()
 
     if (error)
     {
-        Serial.print("Schedule parse error: ");
-        Serial.println(error.c_str());
+        dbg("Schedule parse error: ");
+        dbgln(error.c_str());
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
@@ -382,24 +382,24 @@ void handleDeleteSchedule()
     // Get schedules array and validate index
     JsonArray schedules = schedulesDoc["schedules"];
     int count = schedules.size();
-    Serial.print("Total schedules: ");
-    Serial.println(count);
+    dbg("Total schedules: ");
+    dbgln(count);
 
     if (index < 0 || index >= count)
     {
-        Serial.println("Error: Invalid index");
+        dbgln("Error: Invalid index");
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
 
     // Remove the schedule and write back to file
     schedules.remove(index);
-    Serial.println("Schedule removed from array");
+    dbgln("Schedule removed from array");
 
     File writeFile = LittleFS.open("/schedules.json", "w");
     if (!writeFile)
     {
-        Serial.println("Error: Failed to open file for writing");
+        dbgln("Error: Failed to open file for writing");
         server.send(500, "application/json", "{\"success\":false}");
         return;
     }
@@ -407,7 +407,7 @@ void handleDeleteSchedule()
     serializeJson(schedulesDoc, writeFile);
     writeFile.close();
 
-    Serial.println("Schedule deleted successfully");
+    dbgln("Schedule deleted successfully");
     // loadSchedulesToCache(); // not necessary, check schedules will do it since cachedSchedulesDoc == nullptr
     server.send(200, "application/json", "{\"success\":true}");
 }
@@ -417,7 +417,7 @@ void handleEditSchedule()
     // Check if we have POST data
     if (!server.hasArg("plain"))
     {
-        Serial.println("Error: No edit data received");
+        dbgln("Error: No edit data received");
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
@@ -429,7 +429,7 @@ void handleEditSchedule()
 
     if (error)
     {
-        Serial.println("Error: Failed to parse edit request");
+        dbgln("Error: Failed to parse edit request");
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
@@ -444,7 +444,7 @@ void handleEditSchedule()
     File file = LittleFS.open("/schedules.json", "r");
     if (!file)
     {
-        Serial.println("Error: Schedules file not found");
+        dbgln("Error: Schedules file not found");
         server.send(404, "application/json", "{\"success\":false}");
         return;
     }
@@ -460,7 +460,7 @@ void handleEditSchedule()
 
     if (error)
     {
-        Serial.println("Error: Failed to parse schedules file");
+        dbgln("Error: Failed to parse schedules file");
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
@@ -469,7 +469,7 @@ void handleEditSchedule()
     JsonArray schedules = schedulesDoc["schedules"];
     if (index < 0 || index >= (int)schedules.size())
     {
-        Serial.println("Error: Invalid schedule index");
+        dbgln("Error: Invalid schedule index");
         server.send(400, "application/json", "{\"success\":false}");
         return;
     }
@@ -495,7 +495,7 @@ void handleEditSchedule()
     File writeFile = LittleFS.open("/schedules.json", "w");
     if (!writeFile)
     {
-        Serial.println("Error: Failed to write schedules file");
+        dbgln("Error: Failed to write schedules file");
         server.send(500, "application/json", "{\"success\":false}");
         return;
     }
@@ -503,7 +503,7 @@ void handleEditSchedule()
     serializeJson(schedulesDoc, writeFile);
     writeFile.close();
 
-    Serial.println("Schedule edited successfully");
+    dbgln("Schedule edited successfully");
     // loadSchedulesToCache(); // not necessary, check schedules will do it since cachedSchedulesDoc == nullptr
     server.send(200, "application/json", "{\"success\":true}");
 }
@@ -574,9 +574,9 @@ void WifiSetup()
 
     WiFi.softAP(ssid, password);
 
-    Serial.println("Access Point Started");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.softAPIP());
+    dbgln("Access Point Started");
+    dbg("IP address: ");
+    dbgln(WiFi.softAPIP());
 
     // Setup web server routes
     server.on("/", handleRoot);
@@ -596,5 +596,5 @@ void WifiSetup()
     server.on("/config", handleGetConfig);
     server.on("/config/bell-duration", HTTP_POST, handleUpdateBellDuration);
     server.begin();
-    Serial.println("Web server started");
+    dbgln("Web server started");
 }
