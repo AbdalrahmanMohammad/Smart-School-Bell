@@ -2,7 +2,7 @@
 String lastTriggeredTime = "";
 
 // Global variables for schedule caching
-DynamicJsonDocument* cachedSchedulesDoc = nullptr;
+DynamicJsonDocument *cachedSchedulesDoc = nullptr;
 bool schedulesCacheValid = false;
 
 void initLittleFS()
@@ -37,77 +37,94 @@ void RtcSetup()
 }
 
 // Function to load schedules into cache
-void loadSchedulesToCache() {
+void loadSchedulesToCache()
+{
     // Free existing cache if it exists
-    if (cachedSchedulesDoc != nullptr) {
+    if (cachedSchedulesDoc != nullptr)
+    {
         delete cachedSchedulesDoc;
         cachedSchedulesDoc = nullptr;
     }
-    
+
     // Read schedules from flash memory
     File file = LittleFS.open("/schedules.json", "r");
-    if (!file) {
+    if (!file)
+    {
         schedulesCacheValid = false;
         dbgln("No schedules file found");
         return; // No schedules file
     }
-    
+
     String jsonData = file.readString();
     file.close();
-    
+
     // Allocate new document on heap
     cachedSchedulesDoc = new DynamicJsonDocument(16384);
     DeserializationError error = deserializeJson(*cachedSchedulesDoc, jsonData);
-    
-    if (error) {
+
+    if (error)
+    {
         dbgln("Failed to parse schedules.json");
         delete cachedSchedulesDoc;
         cachedSchedulesDoc = nullptr;
         schedulesCacheValid = false;
         return;
     }
-    
+
     schedulesCacheValid = true;
     dbgln("Schedules loaded to cache successfully");
 }
 
 // Function to initialize schedules cache (call in setup)
-void initSchedulesCache() {
+void initSchedulesCache()
+{
     loadSchedulesToCache();
 }
 
 void checkSchedules()
 {
-    if(!led.isOn()) {
+    if (!led.isOn())
+    {
         return;
     }
-    
+
     // Check if cache is valid
-    if (!schedulesCacheValid || cachedSchedulesDoc == nullptr) {
+    if (!schedulesCacheValid || cachedSchedulesDoc == nullptr)
+    {
         dbgln("Schedules cache invalid, reloading...");
         loadSchedulesToCache();
         return; // No valid schedules to check
     }
-    
+
     // Get current time
     DateTime now = rtc.now();
+    int currentYear = now.year();
+    dbgln("Current year: " + String(currentYear));
+    if (currentYear < 2025 || currentYear > 2060)
+    {
+        dbgln("Invalid year detected: " + String(currentYear) + ". Skipping schedule check.");
+        return;
+    }
     int currentDayOfWeek = now.dayOfTheWeek(); // 0 = Sunday, 1 = Monday, etc.
     currentDayOfWeek++;
-    if (currentDayOfWeek == 7) currentDayOfWeek = 0; 
+    if (currentDayOfWeek == 7)
+        currentDayOfWeek = 0;
     String currentTime = "";
-    if (now.hour() < 10) currentTime += "0";
+    if (now.hour() < 10)
+        currentTime += "0";
     currentTime += String(now.hour());
     currentTime += ":";
-    if (now.minute() < 10) currentTime += "0";
+    if (now.minute() < 10)
+        currentTime += "0";
     currentTime += String(now.minute());
-    
+
     dbgln("Current time: " + currentTime + " Day of week: " + String(currentDayOfWeek));
     // Prevent multiple triggers in the same minute
     if (currentTime == lastTriggeredTime)
     {
         return;
     }
-    
+
     // Check each schedule using cached document
     JsonArray schedules = (*cachedSchedulesDoc)["schedules"];
     for (JsonObject schedule : schedules)
@@ -117,7 +134,7 @@ void checkSchedules()
         {
             continue;
         }
-        
+
         // Check if current day is in the schedule
         JsonArray days = schedule["days"];
         bool dayMatches = false;
@@ -129,18 +146,18 @@ void checkSchedules()
                 break;
             }
         }
-        
+
         if (!dayMatches)
         {
             continue;
         }
-        
+
         // Check if current time matches schedule time
-        const char* scheduleTime = schedule["time"];
+        const char *scheduleTime = schedule["time"];
         if (strcmp(scheduleTime, currentTime.c_str()) == 0)
         {
             // Time matches! Ring the bell
-            const char* type = schedule["type"];
+            const char *type = schedule["type"];
             if (strcmp(type, "bell") == 0)
             {
                 dbg("Ringing bell at scheduled time: ");
