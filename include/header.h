@@ -23,7 +23,7 @@ Timer timer(20UL);
 LED led(D7, D6);
 Bell bell(D5);
 
-#define DEBUG_SERIAL true
+#define DEBUG_SERIAL false
 
 #if DEBUG_SERIAL
     #define dbg(...) Serial.print(__VA_ARGS__)
