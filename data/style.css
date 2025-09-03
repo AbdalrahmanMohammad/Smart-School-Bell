@@ -4,6 +4,7 @@ body {
   color: white;
   text-align: center;
   padding: 50px;
+  direction: rtl;
 }
 
 h1 {
@@ -101,7 +102,7 @@ footer {
 
 #alarm-schedules {
   margin: 30px 0;
-  text-align: left;
+  text-align: right;
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;
@@ -137,7 +138,7 @@ footer {
 .schedule-index {
   position: absolute;
   top: -8px;
-  left: -8px;
+  right: -8px;
   background: #2196f3;
   color: white;
   width: 30px;
@@ -164,7 +165,7 @@ footer {
     height: 25px;
     font-size: 0.8em;
     top: -5px;
-    left: -5px;
+    right: -5px;
   }
 }
 
@@ -194,7 +195,7 @@ footer {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  justify-content: flex-start;
+  justify-content: flex-end;
   align-items: center;
 }
 
@@ -257,7 +258,7 @@ footer {
   }
   
   .schedule-status {
-    align-self: flex-start;
+    align-self: flex-end;
     padding: 8px 0;
   }
   
@@ -609,7 +610,7 @@ footer {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: flex-start;
+  justify-content: flex-end;
   align-items: center;
 }
 
@@ -740,7 +741,7 @@ footer {
 /* Config Panel Styles */
 #config-panel {
   margin: 30px 0;
-  text-align: left;
+  text-align: right;
   max-width: 600px;
   margin-left: auto;
   margin-right: auto;

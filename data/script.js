@@ -6,7 +6,7 @@ function updateTime() {
     })
     .catch((error) => {
       document.getElementById("current-time").textContent =
-        "Error loading time";
+        "خطأ في تحميل الوقت";
       console.error("Error:", error);
     });
 }
@@ -29,10 +29,10 @@ function updateButton(buttonId, statusId, isOn) {
 
   if (isOn) {
     button.className = "control-btn on";
-    status.textContent = "ON";
+    status.textContent = "تشغيل";
   } else {
     button.className = "control-btn off";
-    status.textContent = "OFF";
+    status.textContent = "إيقاف";
   }
 }
 
@@ -92,7 +92,7 @@ function sendTimeToNodeMCU() {
         // Show a brief success message
         const button = document.getElementById("send-time-btn");
         const originalText = button.textContent;
-        button.textContent = "Time Sent!";
+        button.textContent = "تم إرسال الوقت!";
         button.style.background = "#4caf50";
         setTimeout(() => {
           button.textContent = originalText;
@@ -100,12 +100,12 @@ function sendTimeToNodeMCU() {
         }, 2000);
       } else {
         console.error("Error sending time:", data.message);
-        alert("Error sending time to NodeMCU: " + data.message);
+        alert("خطأ في إرسال الوقت إلى NodeMCU: " + data.message);
       }
     })
     .catch((error) => {
       console.error("Error:", error);
-      alert("Error sending time to NodeMCU");
+      alert("خطأ في إرسال الوقت إلى NodeMCU");
     });
 }
 
@@ -140,7 +140,7 @@ function loadSchedules() {
     .catch((error) => {
       console.error("Error loading schedules:", error);
       document.getElementById("schedules-list").innerHTML =
-        "<p>Error loading schedules</p>";
+        "<p>خطأ في تحميل الجداول</p>";
     });
 }
 
@@ -171,9 +171,9 @@ function saveBellDuration() {
   })
     .then(r => r.json())
     .then(d => {
-      if (!d.success) alert('Failed to save');
+      if (!d.success) alert('فشل في الحفظ');
     })
-    .catch(() => alert('Failed to save'));
+    .catch(() => alert('فشل في الحفظ'));
 }
 
 function displaySchedules(schedules) {
@@ -186,7 +186,7 @@ function displaySchedules(schedules) {
   }
 
   if (schedules.length === 0) {
-    container.innerHTML = "<p>No alarms scheduled</p>";
+    container.innerHTML = "<p>لا توجد تنبيهات مجدولة</p>";
     return;
   }
 
@@ -194,14 +194,14 @@ function displaySchedules(schedules) {
   schedules.forEach((schedule, index) => {
     const daysHtml = getDaysHTML(schedule.days);
     const statusClass = schedule.enabled ? "enabled" : "disabled";
-    const statusText = schedule.enabled ? "ENABLED" : "DISABLED";
+    const statusText = schedule.enabled ? "مفعل" : "معطل";
 
     html += `
       <div class="schedule-item" id="schedule-${index}">
         <div class="schedule-index">#${index + 1}</div>
         <div class="schedule-info">
           <div class="schedule-time-row">
-            <div class="schedule-time" id="time-display-${index}">${schedule.time} <span class="type-badge">${(schedule.type || 'bell').toUpperCase()}</span></div>
+            <div class="schedule-time" id="time-display-${index}">${schedule.time} <span class="type-badge">${(schedule.type || 'bell') === 'bell' ? 'الجرس' : 'مصباح التفعيل'}</span></div>
             <div class="schedule-status ${statusClass}" onclick="toggleAlarmStatus(${index})">
               <div class="toggle-switch ${statusClass}"></div>
             </div>
@@ -211,8 +211,8 @@ function displaySchedules(schedules) {
           </div>
         </div>
         <div class="schedule-actions">
-          <button class="edit-btn" onclick="editAlarm(${index})">Edit</button>
-          <button class="delete-btn" onclick="deleteAlarm(${index})">Delete</button>
+          <button class="edit-btn" onclick="editAlarm(${index})">تعديل</button>
+          <button class="delete-btn" onclick="deleteAlarm(${index})">حذف</button>
         </div>
       </div>
     `;
@@ -225,7 +225,7 @@ function displaySchedules(schedules) {
 }
 
 function getDaysHTML(selectedDays) {
-  const dayNames = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
+  const dayNames = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
 
   return dayNames
     .map((day, index) => {
@@ -242,19 +242,19 @@ function updateAddButtonState() {
   
   if (currentCount >= 50) {
     addButton.disabled = true;
-    addButton.textContent = "Maximum alarms reached (50)";
+    addButton.textContent = "تم الوصول للحد الأقصى (50)";
     addButton.style.opacity = "0.6";
     addButton.style.cursor = "not-allowed";
     alarmCounter.style.color = "#f44336"; // Red when limit reached
   } else if (currentCount >= 45) {
     addButton.disabled = false;
-    addButton.textContent = "Add Alarm";
+    addButton.textContent = "إضافة تنبيه";
     addButton.style.opacity = "1";
     addButton.style.cursor = "pointer";
     alarmCounter.style.color = "#ff9800"; // Orange when approaching limit
   } else {
     addButton.disabled = false;
-    addButton.textContent = "Add Alarm";
+    addButton.textContent = "إضافة تنبيه";
     addButton.style.opacity = "1";
     addButton.style.cursor = "pointer";
     alarmCounter.style.color = "#4caf50"; // Green when well under limit
@@ -265,14 +265,14 @@ function addAlarm() {
   // Check if we've reached the limit
   const currentCount = parseInt(document.getElementById("current-alarm-count").textContent);
   if (currentCount >= 50) {
-    alert("Maximum number of alarms (50) reached. Please delete some alarms before adding new ones.");
+    alert("تم الوصول للحد الأقصى من التنبيهات (50). يرجى حذف بعض التنبيهات قبل إضافة تنبيهات جديدة.");
     return;
   }
 
   const time = document.getElementById("alarm-time").value;
 
   if (!time) {
-    alert("Please select a time");
+    alert("يرجى اختيار وقت");
     return;
   }
 
@@ -284,7 +284,7 @@ function addAlarm() {
     });
 
   if (selectedDays.length === 0) {
-    alert("Please select at least one day");
+    alert("يرجى اختيار يوم واحد على الأقل");
     return;
   }
 
@@ -321,12 +321,12 @@ function addAlarm() {
         // Reload schedules
         loadSchedules();
       } else {
-        alert("Error adding alarm: " + data.message);
+        alert("خطأ في إضافة التنبيه: " + data.message);
       }
     })
     .catch((error) => {
       console.error("Error:", error);
-      alert("Error adding alarm");
+      alert("خطأ في إضافة التنبيه");
     });
 }
 
@@ -342,7 +342,7 @@ function toggleAlarmStatus(index) {
 
 function deleteAlarm(index) {
   console.log("Attempting to delete alarm at index:", index);
-  if (confirm("Are you sure you want to delete this alarm?")) {
+  if (confirm("هل أنت متأكد من حذف هذا التنبيه؟")) {
     console.log("Deleting alarm at index:", index);
     fetch("/schedules/delete", {
       method: "POST",
@@ -356,12 +356,12 @@ function deleteAlarm(index) {
         if (data.success) {
           loadSchedules();
         } else {
-          alert("Error deleting alarm: " + data.message);
+          alert("خطأ في حذف التنبيه: " + data.message);
         }
       })
       .catch((error) => {
         console.error("Error:", error);
-        alert("Error deleting alarm");
+        alert("خطأ في حذف التنبيه");
       });
   }
 }
@@ -377,7 +377,7 @@ function editAlarm(index) {
   const currentTime = timeDisplay.textContent.split(' ')[0]; // Extract time before type badge
   const currentDays = Array.from(daysDisplay.querySelectorAll('.days.selected')).map(day => {
     const dayText = day.textContent;
-    const dayNames = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
+    const dayNames = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
     return dayNames.indexOf(dayText);
   });
   const currentEnabled = statusDisplay.querySelector('.toggle-switch').classList.contains('enabled');
@@ -388,43 +388,43 @@ function editAlarm(index) {
   editForm.innerHTML = `
     <div class="edit-content">
       <div class="edit-section">
-        <label>Time:</label>
+        <label>الوقت:</label>
         <input type="time" id="edit-time-${index}" value="${currentTime}" required>
       </div>
       
       <div class="edit-section">
-        <label>Days:</label>
+        <label>الأيام:</label>
         <div class="edit-day-checkboxes">
           <input type="checkbox" id="edit-day-0-${index}" value="0" ${currentDays.includes(0) ? 'checked' : ''}>
-          <label for="edit-day-0-${index}">Sat</label>
+          <label for="edit-day-0-${index}">السبت</label>
           <input type="checkbox" id="edit-day-1-${index}" value="1" ${currentDays.includes(1) ? 'checked' : ''}>
-          <label for="edit-day-1-${index}">Sun</label>
+          <label for="edit-day-1-${index}">الأحد</label>
           <input type="checkbox" id="edit-day-2-${index}" value="2" ${currentDays.includes(2) ? 'checked' : ''}>
-          <label for="edit-day-2-${index}">Mon</label>
+          <label for="edit-day-2-${index}">الاثنين</label>
           <input type="checkbox" id="edit-day-3-${index}" value="3" ${currentDays.includes(3) ? 'checked' : ''}>
-          <label for="edit-day-3-${index}">Tue</label>
+          <label for="edit-day-3-${index}">الثلاثاء</label>
           <input type="checkbox" id="edit-day-4-${index}" value="4" ${currentDays.includes(4) ? 'checked' : ''}>
-          <label for="edit-day-4-${index}">Wed</label>
+          <label for="edit-day-4-${index}">الأربعاء</label>
           <input type="checkbox" id="edit-day-5-${index}" value="5" ${currentDays.includes(5) ? 'checked' : ''}>
-          <label for="edit-day-5-${index}">Thu</label>
+          <label for="edit-day-5-${index}">الخميس</label>
           <input type="checkbox" id="edit-day-6-${index}" value="6" ${currentDays.includes(6) ? 'checked' : ''}>
-          <label for="edit-day-6-${index}">Fri</label>
+          <label for="edit-day-6-${index}">الجمعة</label>
         </div>
       </div>
       
              <div class="edit-section">
-         <label>Status:</label>
+         <label>الحالة:</label>
          <div class="edit-toggle-container">
            <input type="checkbox" id="edit-enabled-${index}" ${currentEnabled ? 'checked' : ''}>
            <div class="toggle-switch ${currentEnabled ? 'enabled' : 'disabled'}" id="edit-toggle-${index}"></div>
-           <span class="edit-toggle-text">${currentEnabled ? 'Enabled' : 'Disabled'}</span>
+           <span class="edit-toggle-text">${currentEnabled ? 'مفعل' : 'معطل'}</span>
          </div>
        </div>
     </div>
     
     <div class="edit-actions">
-      <button class="save-btn" onclick="saveAlarmEdit(${index})">Save</button>
-      <button class="cancel-btn" onclick="cancelAlarmEdit(${index})">Cancel</button>
+      <button class="save-btn" onclick="saveAlarmEdit(${index})">حفظ</button>
+      <button class="cancel-btn" onclick="cancelAlarmEdit(${index})">إلغاء</button>
     </div>
   `;
   
@@ -444,7 +444,7 @@ function editAlarm(index) {
   const toggleSwitch = document.getElementById(`edit-toggle-${index}`);
   
   function updateToggleState() {
-    toggleText.textContent = toggleCheckbox.checked ? 'Enabled' : 'Disabled';
+    toggleText.textContent = toggleCheckbox.checked ? 'مفعل' : 'معطل';
     
     // Update the toggle switch classes
     if (toggleCheckbox.checked) {
@@ -470,7 +470,7 @@ function saveAlarmEdit(index) {
   const newTime = document.getElementById(`edit-time-${index}`).value;
   
   if (!newTime) {
-    alert("Please select a valid time");
+    alert("يرجى اختيار وقت صحيح");
     return;
   }
   
@@ -481,7 +481,7 @@ function saveAlarmEdit(index) {
   });
   
   if (selectedDays.length === 0) {
-    alert("Please select at least one day");
+    alert("يرجى اختيار يوم واحد على الأقل");
     return;
   }
   
@@ -507,12 +507,12 @@ function saveAlarmEdit(index) {
         cancelAlarmEdit(index);
         loadSchedules(); // Reload to ensure consistency
       } else {
-        alert("Error updating alarm: " + (data.message || "Unknown error"));
+        alert("خطأ في تحديث التنبيه: " + (data.message || "خطأ غير معروف"));
       }
     })
     .catch((error) => {
       console.error("Error:", error);
-      alert("Error updating alarm");
+      alert("خطأ في تحديث التنبيه");
     });
 }
 
