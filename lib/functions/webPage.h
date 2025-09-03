@@ -183,44 +183,44 @@ void handleUpdateBellDuration()
 
 void handleBellToggle()
 {
-    // Print file content
-    File file = LittleFS.open("/schedules.json", "r");
-    if (!file)
-    {
-        dbg("Schedules file not found, assuming no schedules");
-    }
-    else
-    {
-        String jsonData = file.readString();
-        dbgln("File schedules: " + jsonData);
-        file.close();
-    }
+    // // Print file content
+    // File file = LittleFS.open("/schedules.json", "r");
+    // if (!file)
+    // {
+    //     dbg("Schedules file not found, assuming no schedules");
+    // }
+    // else
+    // {
+    //     String jsonData = file.readString();
+    //     dbgln("File schedules: " + jsonData);
+    //     file.close();
+    // }
 
-    // Print separator
-    dbgln("***********");
+    // // Print separator
+    // dbgln("***********");
 
-    // Print cached content
-    if (!schedulesCacheValid || cachedSchedulesDoc == nullptr)
-    {
-        loadSchedulesToCache();
-    }
+    // // Print cached content
+    // if (!schedulesCacheValid || cachedSchedulesDoc == nullptr)
+    // {
+    //     loadSchedulesToCache();
+    // }
 
-    if (schedulesCacheValid && cachedSchedulesDoc != nullptr)
-    {
-        String cachedJsonData;
-        serializeJson(*cachedSchedulesDoc, cachedJsonData);
-        dbgln("Cached schedules: " + cachedJsonData);
-    }
-    else
-    {
-        dbgln("No cached schedules available");
-    }
+    // if (schedulesCacheValid && cachedSchedulesDoc != nullptr)
+    // {
+    //     String cachedJsonData;
+    //     serializeJson(*cachedSchedulesDoc, cachedJsonData);
+    //     dbgln("Cached schedules: " + cachedJsonData);
+    // }
+    // else
+    // {
+    //     dbgln("No cached schedules available");
+    // }
 
     bell.on();
 
     StaticJsonDocument<100> doc;
     doc["bell"] = bell.isOn();
-    dbgln("--------------------------");
+    // dbgln("--------------------------");
     String json;
     serializeJson(doc, json);
     server.send(200, "application/json", json);

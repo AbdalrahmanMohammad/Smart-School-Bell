@@ -10,8 +10,8 @@ private:
     byte pin;
     byte buttonPin; // it is optional to use
     boolean hasbutton;
-    boolean offState = LOW;
-    boolean onState = HIGH;
+    boolean offState = HIGH;
+    boolean onState = LOW;
 
 public:
     Bell(byte pin)
