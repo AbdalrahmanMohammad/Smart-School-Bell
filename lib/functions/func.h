@@ -25,6 +25,18 @@ void initLittleFS()
 
 void RtcSetup()
 {
+    pinMode(SCL, OUTPUT);       // SCL
+    pinMode(SDA, INPUT_PULLUP); // SDA
+    for (int i = 0; i < 16; i++)
+    {
+        if (digitalRead(SDA) == HIGH)
+            break; // SDA released
+        digitalWrite(SCL, LOW);
+        delayMicroseconds(5);
+        digitalWrite(SCL, HIGH);
+        delayMicroseconds(5);
+    }
+
     Wire.begin(SDA, SCL); // SDA = D2, SCL = D1
 
     if (!rtc.begin())
