@@ -28,7 +28,9 @@ Bell bell(D5);
 #if DEBUG_SERIAL
     #define dbg(...) Serial.print(__VA_ARGS__)
     #define dbgln(...) Serial.println(__VA_ARGS__)
+    #define initDebugSerial() Serial.begin(9600)
 #else
     #define dbg(...)
     #define dbgln(...)
+    #define initDebugSerial()
 #endif
