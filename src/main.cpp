@@ -3,7 +3,7 @@
 
 void setup()
 {
-  // Serial.begin(9600);
+  initDebugSerial();
   initLittleFS();
   led.init();
   bell.init();

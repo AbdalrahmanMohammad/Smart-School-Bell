@@ -9,15 +9,12 @@
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 
-
 // Create a web server on port 80
 ESP8266WebServer server(80);
-
 
 #define SCL D1
 #define SDA D2
 RTC_DS3231 rtc;
-
 
 Timer timer(20UL);
 LED led(D7, D6);
@@ -26,9 +23,11 @@ Bell bell(D5);
 #define DEBUG_SERIAL false
 
 #if DEBUG_SERIAL
-    #define dbg(...) Serial.print(__VA_ARGS__)
-    #define dbgln(...) Serial.println(__VA_ARGS__)
+#define dbg(...) Serial.print(__VA_ARGS__)
+#define dbgln(...) Serial.println(__VA_ARGS__)
+#define initDebugSerial() Serial.begin(9600)
 #else
-    #define dbg(...)
-    #define dbgln(...)
+#define dbg(...)
+#define dbgln(...)
+#define initDebugSerial()
 #endif
