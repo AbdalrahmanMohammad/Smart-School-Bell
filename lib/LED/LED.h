@@ -66,7 +66,8 @@ public:
             String c = f.readString();
             f.close();
             DeserializationError e = deserializeJson(cfg, c);
-            if (e) cfg.clear();
+            if (e)
+                cfg.clear();
         }
         cfg["ledOn"] = true;
         File wf = LittleFS.open("/config.json", "w");
@@ -88,7 +89,8 @@ public:
             String c = f.readString();
             f.close();
             DeserializationError e = deserializeJson(cfg, c);
-            if (e) cfg.clear();
+            if (e)
+                cfg.clear();
         }
         cfg["ledOn"] = false;
         File wf = LittleFS.open("/config.json", "w");
@@ -137,11 +139,11 @@ public:
         return digitalRead(buttonPin);
     }
 
-    virtual void moniterBtn()
+    virtual boolean moniterBtn()
     {
         if (!hasButton())
-            return;
-
+            return false;
+        boolean ret = false;
         btncurstate = btnstate();
 
         if ((btncurstate == LOW) && (btnprevstate == HIGH) && (millis() - previous > 500)) // button pressed and debounce
@@ -149,13 +151,15 @@ public:
             previous = millis(); // for debounce
             toggle();
             btnprevstate = btncurstate;
+            ret = true;
         }
         btnprevstate = btncurstate;
+        return ret;
     }
 
-    virtual void loop()
+    virtual boolean loop()
     {
-        moniterBtn();
+        return moniterBtn();
     }
 };
 

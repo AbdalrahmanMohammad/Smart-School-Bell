@@ -8,7 +8,11 @@
 #include <ESP8266WebServer.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
+#include <BlynkSimpleEsp8266.h>
 
+// WiFi credentials for Blynk (STA mode)
+char ssid[] = "PLUS";            
+char pass[] = "87654321";   
 
 // Create a web server on port 80
 ESP8266WebServer server(80);
@@ -23,12 +27,14 @@ Timer timer(20UL);
 LED led(D7, D6);
 Bell bell(D5);
 
-#define DEBUG_SERIAL false
+#define DEBUG_SERIAL true
 
 #if DEBUG_SERIAL
     #define dbg(...) Serial.print(__VA_ARGS__)
     #define dbgln(...) Serial.println(__VA_ARGS__)
+    #define initDebugSerial() Serial.begin(9600)
 #else
     #define dbg(...)
     #define dbgln(...)
+    #define initDebugSerial()
 #endif

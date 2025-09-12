@@ -190,8 +190,9 @@ void checkSchedules()
 
 void controlDevices()
 {
-    led.loop();
     bell.loop();
+    if (led.loop())
+        Blynk.virtualWrite(V1, led.isOn() ? 1 : 0);
     checkSchedules(); // Add schedule checking
 }
 
