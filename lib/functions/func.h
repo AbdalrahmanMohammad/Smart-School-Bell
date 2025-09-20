@@ -4,6 +4,7 @@ String lastTriggeredTime = "";
 // Global variables for schedule caching
 DynamicJsonDocument *cachedSchedulesDoc = nullptr;
 bool schedulesCacheValid = false;
+int cachedDayOfYear = -1; // Track which day is cached
 
 void initLittleFS()
 {
@@ -48,8 +49,8 @@ void RtcSetup()
     // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 }
 
-// Function to load schedules into cache
-void loadSchedulesToCache()
+// Function to load today's schedules into cache
+void loadTodaysSchedulesToCache()
 {
     // Free existing cache if it exists
     if (cachedSchedulesDoc != nullptr)
@@ -58,57 +59,143 @@ void loadSchedulesToCache()
         cachedSchedulesDoc = nullptr;
     }
 
-    // Read schedules from flash memory
-    File file = LittleFS.open("/schedules.json", "r");
+    // Get current day of year
+    DateTime now = rtc.now();
+    int currentDayOfYear = 0;
+    int daysInMonth[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    
+    for (int i = 0; i < now.month() - 1; i++) {
+        currentDayOfYear += daysInMonth[i];
+    }
+    currentDayOfYear += now.day();
+
+    // Read schedules from flash memory using streaming approach
+    File file = LittleFS.open("/schedules.txt", "r");
     if (!file)
     {
-        schedulesCacheValid = false;
-        dbgln("No schedules file found");
-        return; // No schedules file
-    }
-
-    String jsonData = file.readString();
-    file.close();
-
-    // Allocate new document on heap
-    cachedSchedulesDoc = new DynamicJsonDocument(16384);
-    DeserializationError error = deserializeJson(*cachedSchedulesDoc, jsonData);
-
-    if (error)
-    {
-        dbgln("Failed to parse schedules.json");
-        delete cachedSchedulesDoc;
-        cachedSchedulesDoc = nullptr;
-        schedulesCacheValid = false;
+        // Fallback to JSON format if text file doesn't exist
+        dbgln("schedules.txt not found, trying schedules.json...");
+        file = LittleFS.open("/schedules.json", "r");
+        if (!file)
+        {
+            schedulesCacheValid = false;
+            dbgln("No schedules file found");
+            return; // No schedules file
+        }
+        
+        // Use JSON parsing for fallback
+        String jsonData = file.readString();
+        file.close();
+        
+        DynamicJsonDocument fullDoc(30000);
+        DeserializationError error = deserializeJson(fullDoc, jsonData);
+        
+        if (error)
+        {
+            dbgln("Failed to parse schedules.json: " + String(error.c_str()));
+            schedulesCacheValid = false;
+            return;
+        }
+        
+        // Create cache with today's schedule
+        cachedSchedulesDoc = new DynamicJsonDocument(1024);
+        JsonArray todaySchedules = cachedSchedulesDoc->createNestedArray("schedules");
+        
+        JsonArray allSchedules = fullDoc["schedules"];
+        bool foundToday = false;
+        
+        for (JsonObject schedule : allSchedules)
+        {
+            if (schedule["dayOfYear"].as<int>() == currentDayOfYear)
+            {
+                JsonObject todaySchedule = todaySchedules.createNestedObject();
+                todaySchedule["dayOfYear"] = schedule["dayOfYear"];
+                todaySchedule["onTime"] = schedule["onTime"];
+                todaySchedule["offTime"] = schedule["offTime"];
+                todaySchedule["enabled"] = schedule["enabled"];
+                todaySchedule["type"] = schedule["type"];
+                foundToday = true;
+                dbgln("Found today's schedule: " + schedule["onTime"].as<String>() + " to " + schedule["offTime"].as<String>() + " (" + schedule["type"].as<String>() + ")");
+                break;
+            }
+        }
+        
+        if (!foundToday) {
+            dbgln("No schedules found for today (day " + String(currentDayOfYear) + ")");
+        }
+        
+        schedulesCacheValid = true;
+        cachedDayOfYear = currentDayOfYear;
+        dbgln("Today's schedules loaded to cache successfully (JSON fallback)");
         return;
     }
 
+    // Create a new document with only today's schedules
+    cachedSchedulesDoc = new DynamicJsonDocument(1024); // Small cache for just today
+    JsonArray todaySchedules = cachedSchedulesDoc->createNestedArray("schedules");
+    
+    bool foundToday = false;
+    String line;
+    
+    // Read line by line to find today's schedule
+    while (file.available()) {
+        line = file.readStringUntil('\n');
+        line.trim();
+        
+        if (line.length() == 0) continue;
+        
+        // Parse: dayOfYear,onTime,offTime,enabled,type
+        int firstComma = line.indexOf(',');
+        int secondComma = line.indexOf(',', firstComma + 1);
+        int thirdComma = line.indexOf(',', secondComma + 1);
+        int fourthComma = line.indexOf(',', thirdComma + 1);
+        
+        if (firstComma == -1 || secondComma == -1 || thirdComma == -1 || fourthComma == -1) {
+            continue; // Skip malformed lines
+        }
+        
+        int dayOfYear = line.substring(0, firstComma).toInt();
+        
+        if (dayOfYear == currentDayOfYear) {
+            // Found today's schedule!
+            String onTime = line.substring(firstComma + 1, secondComma);
+            String offTime = line.substring(secondComma + 1, thirdComma);
+            bool enabled = line.substring(thirdComma + 1, fourthComma).toInt() == 1;
+            String type = line.substring(fourthComma + 1);
+            
+            JsonObject todaySchedule = todaySchedules.createNestedObject();
+            todaySchedule["dayOfYear"] = dayOfYear;
+            todaySchedule["onTime"] = onTime;
+            todaySchedule["offTime"] = offTime;
+            todaySchedule["enabled"] = enabled;
+            todaySchedule["type"] = type;
+            foundToday = true;
+            
+            dbgln("Found today's schedule: " + onTime + " to " + offTime + " (" + type + ")");
+            break; // Found today's schedule, no need to continue reading
+        }
+    }
+    
+    file.close();
+    
+    if (!foundToday) {
+        dbgln("No schedules found for today (day " + String(currentDayOfYear) + ")");
+    }
+
     schedulesCacheValid = true;
-    dbgln("Schedules loaded to cache successfully");
+    cachedDayOfYear = currentDayOfYear;
+    dbgln("Today's schedules loaded to cache successfully");
 }
 
 // Function to initialize schedules cache (call in setup)
 void initSchedulesCache()
 {
-    loadSchedulesToCache();
+    loadTodaysSchedulesToCache();
 }
 
 void checkSchedules()
 {
-    if (!led.isOn())
-    {
-        return;
-    }
-
-    // Check if cache is valid
-    if (!schedulesCacheValid || cachedSchedulesDoc == nullptr)
-    {
-        dbgln("Schedules cache invalid, reloading...");
-        loadSchedulesToCache();
-        return; // No valid schedules to check
-    }
-
-    // Get current time
+    // Get current time first
     DateTime now = rtc.now();
     int currentYear = now.year();
     dbgln("Current year: " + String(currentYear));
@@ -117,10 +204,25 @@ void checkSchedules()
         dbgln("Invalid year detected: " + String(currentYear) + ". Skipping schedule check.");
         return;
     }
-    int currentDayOfWeek = now.dayOfTheWeek(); // 0 = Sunday, 1 = Monday, etc.
-    currentDayOfWeek++;
-    if (currentDayOfWeek == 7)
-        currentDayOfWeek = 0;
+
+    // Calculate current day of year
+    int currentDayOfYear = 0;
+    int daysInMonth[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}; // Using 29 for Feb to handle leap years
+    
+    for (int i = 0; i < now.month() - 1; i++) {
+        currentDayOfYear += daysInMonth[i];
+    }
+    currentDayOfYear += now.day();
+
+    // Check if cache is valid and for today
+    if (!schedulesCacheValid || cachedSchedulesDoc == nullptr || cachedDayOfYear != currentDayOfYear)
+    {
+        dbgln("Schedules cache invalid or day changed, reloading...");
+        loadTodaysSchedulesToCache();
+        return; // No valid schedules to check
+    }
+
+    // Format current time as HH:MM
     String currentTime = "";
     if (now.hour() < 10)
         currentTime += "0";
@@ -130,7 +232,8 @@ void checkSchedules()
         currentTime += "0";
     currentTime += String(now.minute());
 
-    dbgln("Current time: " + currentTime + " Day of week: " + String(currentDayOfWeek));
+    dbgln("Current day of year: " + String(currentDayOfYear) + " Current time: " + currentTime);
+    
     // Prevent multiple triggers in the same minute
     if (currentTime == lastTriggeredTime)
     {
@@ -147,42 +250,56 @@ void checkSchedules()
             continue;
         }
 
-        // Check if current day is in the schedule
-        JsonArray days = schedule["days"];
-        bool dayMatches = false;
-        for (int day : days)
+        // Check if current day of year matches schedule day of year
+        int scheduleDayOfYear = schedule["dayOfYear"];
+        if (scheduleDayOfYear != currentDayOfYear)
         {
-            if (day == currentDayOfWeek)
-            {
-                dayMatches = true;
-                break;
-            }
+            continue; // Day of year doesn't match
         }
 
-        if (!dayMatches)
+        // Check if current time matches ON time
+        const char *onTime = schedule["onTime"];
+        if (strcmp(onTime, currentTime.c_str()) == 0)
         {
-            continue;
-        }
-
-        // Check if current time matches schedule time
-        const char *scheduleTime = schedule["time"];
-        if (strcmp(scheduleTime, currentTime.c_str()) == 0)
-        {
-            // Time matches! Ring the bell
+            // ON time matches! Turn on the device
             const char *type = schedule["type"];
             if (strcmp(type, "bell") == 0)
             {
-                dbg("Ringing bell at scheduled time: ");
-                dbgln(scheduleTime);
+                dbg("Turning ON bell at scheduled time: ");
+                dbgln(onTime);
                 bell.on();
                 lastTriggeredTime = currentTime; // Mark this time as triggered
             }
             else if (strcmp(type, "led") == 0)
             {
-                dbg("Toggling LED at scheduled time: ");
-                dbgln(scheduleTime);
-                led.off();
+                dbg("Turning ON LED at scheduled time: ");
+                dbgln(onTime);
+                led.on();
                 lastTriggeredTime = currentTime; // Mark this time as triggered
+            }
+        }
+        // Check if current time matches OFF time
+        else
+        {
+            const char *offTime = schedule["offTime"];
+            if (strcmp(offTime, currentTime.c_str()) == 0)
+            {
+                // OFF time matches! Turn off the device
+                const char *type = schedule["type"];
+                if (strcmp(type, "bell") == 0)
+                {
+                    dbg("Turning OFF bell at scheduled time: ");
+                    dbgln(offTime);
+                    bell.off();
+                    lastTriggeredTime = currentTime; // Mark this time as triggered
+                }
+                else if (strcmp(type, "led") == 0)
+                {
+                    dbg("Turning OFF LED at scheduled time: ");
+                    dbgln(offTime);
+                    led.off();
+                    lastTriggeredTime = currentTime; // Mark this time as triggered
+                }
             }
         }
     }

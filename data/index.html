@@ -4,13 +4,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NodeMCU Access Point</title>
+  <title>Smart Timer - NodeMCU</title>
   <link rel="stylesheet" href="./style.css">
 </head>
 
 <body>
-  <h1>Welcome to NodeMCU AP!!</h1>
-  <p>You are now connected to the NodeMCU Access Point.</p>
+  <h1>Smart Timer Controller</h1>
+  <p>Schedule your devices to turn on and off for any day of the year.</p>
 
   <div id="time-display">
     <h2>Current Time</h2>
@@ -33,7 +33,7 @@
   </div>
   
   <div id="config-panel">
-    <h2>Bell Settings</h2>
+    <h2>Device Settings</h2>
     <div class="form-group">
       <label for="bell-duration">Bell Duration (seconds):</label>
       <input type="number" id="bell-duration" min="0" max="60" step="1" value="3">
@@ -41,43 +41,16 @@
     </div>
   </div>
   <!-- /////////////////////////// -->
-  <div id="alarm-schedules">
-    <h2>Alarm Schedules</h2>
-    <div id="alarm-counter">
-      <p>Alarms: <span id="current-alarm-count">0</span>/50</p>
+  <div id="timer-schedules">
+    <h2>Smart Timer Schedules</h2>
+    <div id="schedule-counter">
+      <p>Schedules: <span id="current-schedule-count">0</span>/366</p>
     </div>
     <div id="schedules-list">
       <p>Loading schedules...</p>
     </div>
 
-    <div class="add-alarm-form">
-      <h3>Add New Alarm</h3>
-      <div class="form-group">
-        <label for="alarm-time">Time:</label>
-        <input type="time" id="alarm-time" required>
-      </div>
-      <div class="form-group">
-        <label for="alarm-type">Type:</label>
-        <select id="alarm-type">
-          <option value="bell">Bell</option>
-          <option value="led">LED</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Days:</label>
-        <div class="day-checkboxes">
-          <input type="checkbox" id="day-0" value="0"><label for="day-0">Sat</label>
-          <input type="checkbox" id="day-1" value="1"><label for="day-1">Sun</label>
-          <input type="checkbox" id="day-2" value="2"><label for="day-2">Mon</label>
-          <input type="checkbox" id="day-3" value="3"><label for="day-3">Tue</label>
-          <input type="checkbox" id="day-4" value="4"><label for="day-4">Wed</label>
-          <input type="checkbox" id="day-5" value="5"><label for="day-5">Thu</label>
-          <input type="checkbox" id="day-6" value="6"><label for="day-6">Fri</label>
-        </div>
-      </div>
-      
-      <button onclick="addAlarm()" class="add-btn">Add Alarm</button>
-    </div>
+  <!-- Add/Delete features removed - only edit functionality available -->
   </div>
   <!-- //////////////////////////////////////// -->
   <a class="button" href="/">Refresh</a>

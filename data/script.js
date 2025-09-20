@@ -127,14 +127,27 @@ loadSchedules();
 // Load config immediately
 loadConfig();
 
+// Set up month/day selector interaction
+document.addEventListener('DOMContentLoaded', function() {
+  const monthSelect = document.getElementById('schedule-month');
+  if (monthSelect) {
+    monthSelect.addEventListener('change', updateDaySelector);
+  }
+});
+
 // Update schedules every 5 seconds
 // setInterval(loadSchedules, 5000);
 
 function loadSchedules() {
+  console.log("Loading schedules...");
   fetch("/schedules")
-  // fetch("https://mocki.io/v1/0a97100d-fb9f-4508-add7-a19b6d1f52d5")
-    .then((response) => response.json())
+    .then((response) => {
+      console.log("Response received:", response.status);
+      return response.json();
+    })
     .then((data) => {
+      console.log("Data received:", data);
+      console.log("Schedules count:", data.schedules ? data.schedules.length : "undefined");
       displaySchedules(data.schedules);
     })
     .catch((error) => {
@@ -177,210 +190,198 @@ function saveBellDuration() {
 }
 
 function displaySchedules(schedules) {
+  console.log("displaySchedules called with:", schedules);
   const container = document.getElementById("schedules-list");
   
-  // Update alarm counter
-  const alarmCounter = document.getElementById("current-alarm-count");
-  if (alarmCounter) {
-    alarmCounter.textContent = schedules.length;
+  if (!schedules) {
+    console.error("Schedules is undefined or null");
+    container.innerHTML = "<p>Error: No schedules data</p>";
+    return;
+  }
+  
+  // Store schedules globally so edit function can access them
+  window.currentSchedules = schedules;
+  
+  // Update schedule counter
+  const scheduleCounter = document.getElementById("current-schedule-count");
+  if (scheduleCounter) {
+    scheduleCounter.textContent = schedules.length;
   }
 
   if (schedules.length === 0) {
-    container.innerHTML = "<p>No alarms scheduled</p>";
+    container.innerHTML = "<p>No schedules configured</p>";
     return;
   }
 
   let html = "";
   schedules.forEach((schedule, index) => {
-    const daysHtml = getDaysHTML(schedule.days);
     const statusClass = schedule.enabled ? "enabled" : "disabled";
     const statusText = schedule.enabled ? "ENABLED" : "DISABLED";
+    const formattedDate = formatDayOfYear(schedule.dayOfYear);
 
     html += `
       <div class="schedule-item" id="schedule-${index}">
         <div class="schedule-index">#${index + 1}</div>
         <div class="schedule-info">
-          <div class="schedule-time-row">
-            <div class="schedule-time" id="time-display-${index}">${schedule.time} <span class="type-badge">${(schedule.type || 'bell').toUpperCase()}</span></div>
-            <div class="schedule-status ${statusClass}" onclick="toggleAlarmStatus(${index})">
+          <div class="schedule-date-row">
+            <div class="schedule-date" id="date-display-${index}">${formattedDate}</div>
+            <div class="schedule-status ${statusClass}" onclick="toggleScheduleStatus(${index})">
               <div class="toggle-switch ${statusClass}"></div>
             </div>
           </div>
-          <div class="schedule-days">       
-            ${daysHtml}
+          <div class="schedule-times">
+            <div class="time-slot">
+              <span class="time-label">ON:</span>
+              <span class="time-value" id="on-time-display-${index}">${schedule.onTime}</span>
+            </div>
+            <div class="time-slot">
+              <span class="time-label">OFF:</span>
+              <span class="time-value" id="off-time-display-${index}">${schedule.offTime}</span>
+            </div>
+            <span class="type-badge">${(schedule.type || 'led').toUpperCase()}</span>
           </div>
         </div>
         <div class="schedule-actions">
-          <button class="edit-btn" onclick="editAlarm(${index})">Edit</button>
-          <button class="delete-btn" onclick="deleteAlarm(${index})">Delete</button>
+          <button class="edit-btn" onclick="editSchedule(${index})">Edit</button>
         </div>
       </div>
     `;
   });
 
   container.innerHTML = html;
+}
+
+function formatDayOfYear(dayOfYear) {
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
   
-  // Update add button state after displaying schedules
-  updateAddButtonState();
-}
-
-function getDaysHTML(selectedDays) {
-  const dayNames = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
-
-  return dayNames
-    .map((day, index) => {
-      const isSelected = selectedDays.includes(index);
-      return `<div class="days${isSelected ? " selected" : ""}">${day}</div>`;
-    })
-    .join("");
-}
-
-function updateAddButtonState() {
-  const addButton = document.querySelector('.add-btn');
-  const alarmCounter = document.getElementById("current-alarm-count");
-  const currentCount = parseInt(alarmCounter.textContent);
+  // Calculate month and day from day of year
+  let month = 0;
+  let day = dayOfYear;
   
-  if (currentCount >= 50) {
-    addButton.disabled = true;
-    addButton.textContent = "Maximum alarms reached (50)";
-    addButton.style.opacity = "0.6";
-    addButton.style.cursor = "not-allowed";
-    alarmCounter.style.color = "#f44336"; // Red when limit reached
-  } else if (currentCount >= 45) {
-    addButton.disabled = false;
-    addButton.textContent = "Add Alarm";
-    addButton.style.opacity = "1";
-    addButton.style.cursor = "pointer";
-    alarmCounter.style.color = "#ff9800"; // Orange when approaching limit
-  } else {
-    addButton.disabled = false;
-    addButton.textContent = "Add Alarm";
-    addButton.style.opacity = "1";
-    addButton.style.cursor = "pointer";
-    alarmCounter.style.color = "#4caf50"; // Green when well under limit
+  const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]; // Using 29 for Feb to handle leap years
+  
+  while (day > daysInMonth[month]) {
+    day -= daysInMonth[month];
+    month++;
+  }
+  
+  return `${monthNames[month]} ${day}`;
+}
+
+// Function to populate day selector based on selected month
+function updateDaySelector() {
+  const monthSelect = document.getElementById('schedule-month');
+  const daySelect = document.getElementById('schedule-day');
+  
+  if (!monthSelect || !daySelect) return;
+  
+  const selectedMonth = parseInt(monthSelect.value);
+  if (!selectedMonth) {
+    daySelect.innerHTML = '<option value="">Select Day</option>';
+    return;
+  }
+  
+  const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const maxDays = daysInMonth[selectedMonth - 1];
+  
+  daySelect.innerHTML = '<option value="">Select Day</option>';
+  for (let day = 1; day <= maxDays; day++) {
+    const option = document.createElement('option');
+    option.value = day;
+    option.textContent = day;
+    daySelect.appendChild(option);
   }
 }
 
-function addAlarm() {
-  // Check if we've reached the limit
-  const currentCount = parseInt(document.getElementById("current-alarm-count").textContent);
-  if (currentCount >= 50) {
-    alert("Maximum number of alarms (50) reached. Please delete some alarms before adding new ones.");
-    return;
+// Function to calculate day of year from month and day
+function calculateDayOfYear(month, day) {
+  const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  let dayOfYear = 0;
+  
+  for (let i = 0; i < month - 1; i++) {
+    dayOfYear += daysInMonth[i];
   }
-
-  const time = document.getElementById("alarm-time").value;
-
-  if (!time) {
-    alert("Please select a time");
-    return;
-  }
-
-  const selectedDays = [];
-  document
-    .querySelectorAll('.day-checkboxes input[type="checkbox"]:checked')
-    .forEach((checkbox) => {
-      selectedDays.push(parseInt(checkbox.value));
-    });
-
-  if (selectedDays.length === 0) {
-    alert("Please select at least one day");
-    return;
-  }
-
-  const type = document.getElementById("alarm-type") ? document.getElementById("alarm-type").value : "bell";
-
-  const newAlarm = {
-    time: time,
-    type: type,
-    days: selectedDays,
-    enabled: true,
-  };
-
-  fetch("/schedules/add", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(newAlarm),
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      if (data.success) {
-        // Clear form
-        document.getElementById("alarm-time").value = "";
-        if (document.getElementById("alarm-type")) {
-          document.getElementById("alarm-type").value = "bell";
-        }
-        document
-          .querySelectorAll('.day-checkboxes input[type="checkbox"]')
-          .forEach((checkbox) => {
-            checkbox.checked = false;
-          });
-
-        // Reload schedules
-        loadSchedules();
-      } else {
-        alert("Error adding alarm: " + data.message);
-      }
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      alert("Error adding alarm");
-    });
+  
+  return dayOfYear + day;
 }
 
-function toggleAlarmStatus(index) {
-  // This function will toggle the alarm status
+// Function to update edit day selector
+function updateEditDaySelector(index) {
+  const monthSelect = document.getElementById(`edit-month-${index}`);
+  const daySelect = document.getElementById(`edit-day-${index}`);
+  
+  if (!monthSelect || !daySelect) return;
+  
+  const selectedMonth = parseInt(monthSelect.value);
+  if (!selectedMonth) {
+    daySelect.innerHTML = '<option value="">Select Day</option>';
+    return;
+  }
+  
+  const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const maxDays = daysInMonth[selectedMonth - 1];
+  
+  daySelect.innerHTML = '<option value="">Select Day</option>';
+  for (let day = 1; day <= maxDays; day++) {
+    const option = document.createElement('option');
+    option.value = day;
+    option.textContent = day;
+    daySelect.appendChild(option);
+  }
+}
+
+// updateAddButtonState function removed - no longer needed
+
+// addSchedule function removed - only edit functionality available
+
+function toggleScheduleStatus(index) {
+  // This function will toggle the schedule status
   // For now, it just reloads the schedules to show the toggle effect
   // In a real implementation, you'd send a request to update the status
-  console.log("Toggling alarm status for index:", index);
+  console.log("Toggling schedule status for index:", index);
   
   // Simulate toggle by reloading (in real app, you'd update the backend)
   loadSchedules();
 }
 
-function deleteAlarm(index) {
-  console.log("Attempting to delete alarm at index:", index);
-  if (confirm("Are you sure you want to delete this alarm?")) {
-    console.log("Deleting alarm at index:", index);
-    fetch("/schedules/delete", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ index: index }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.success) {
-          loadSchedules();
-        } else {
-          alert("Error deleting alarm: " + data.message);
-        }
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-        alert("Error deleting alarm");
-      });
-  }
-}
+// deleteSchedule function removed - only edit functionality available
 
-function editAlarm(index) {
+function editSchedule(index) {
   const scheduleItem = document.getElementById(`schedule-${index}`);
-  const timeDisplay = document.getElementById(`time-display-${index}`);
+  const dateDisplay = document.getElementById(`date-display-${index}`);
+  const onTimeDisplay = document.getElementById(`on-time-display-${index}`);
+  const offTimeDisplay = document.getElementById(`off-time-display-${index}`);
   const actionsDiv = scheduleItem.querySelector('.schedule-actions');
-  const daysDisplay = scheduleItem.querySelector('.schedule-days');
   const statusDisplay = scheduleItem.querySelector('.schedule-status');
   
-  // Get current schedule data
-  const currentTime = timeDisplay.textContent.split(' ')[0]; // Extract time before type badge
-  const currentDays = Array.from(daysDisplay.querySelectorAll('.days.selected')).map(day => {
-    const dayText = day.textContent;
-    const dayNames = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
-    return dayNames.indexOf(dayText);
-  });
-  const currentEnabled = statusDisplay.querySelector('.toggle-switch').classList.contains('enabled');
+  // Get current schedule data from the global schedules array
+  // We need to access the schedules data that was loaded
+  if (!window.currentSchedules || !window.currentSchedules[index]) {
+    console.error('Schedule data not available for index:', index);
+    return;
+  }
+  
+  const currentSchedule = window.currentSchedules[index];
+  const currentEnabled = currentSchedule.enabled;
+  const currentDayOfYear = currentSchedule.dayOfYear;
+  const currentOnTime = currentSchedule.onTime;
+  const currentOffTime = currentSchedule.offTime;
+  
+  // Convert day of year to month and day
+  const monthNames = ["January", "February", "March", "April", "May", "June",
+                     "July", "August", "September", "October", "November", "December"];
+  const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  
+  let month = 0;
+  let day = currentDayOfYear;
+  while (day > daysInMonth[month]) {
+    day -= daysInMonth[month];
+    month++;
+  }
+  month += 1; // Convert to 1-based month
   
   // Create comprehensive edit form
   const editForm = document.createElement('div');
@@ -388,55 +389,81 @@ function editAlarm(index) {
   editForm.innerHTML = `
     <div class="edit-content">
       <div class="edit-section">
-        <label>Time:</label>
-        <input type="time" id="edit-time-${index}" value="${currentTime}" required>
+        <label>Month:</label>
+        <select id="edit-month-${index}" required>
+          <option value="">Select Month</option>
+          <option value="1" ${month === 1 ? 'selected' : ''}>January</option>
+          <option value="2" ${month === 2 ? 'selected' : ''}>February</option>
+          <option value="3" ${month === 3 ? 'selected' : ''}>March</option>
+          <option value="4" ${month === 4 ? 'selected' : ''}>April</option>
+          <option value="5" ${month === 5 ? 'selected' : ''}>May</option>
+          <option value="6" ${month === 6 ? 'selected' : ''}>June</option>
+          <option value="7" ${month === 7 ? 'selected' : ''}>July</option>
+          <option value="8" ${month === 8 ? 'selected' : ''}>August</option>
+          <option value="9" ${month === 9 ? 'selected' : ''}>September</option>
+          <option value="10" ${month === 10 ? 'selected' : ''}>October</option>
+          <option value="11" ${month === 11 ? 'selected' : ''}>November</option>
+          <option value="12" ${month === 12 ? 'selected' : ''}>December</option>
+        </select>
       </div>
       
       <div class="edit-section">
-        <label>Days:</label>
-        <div class="edit-day-checkboxes">
-          <input type="checkbox" id="edit-day-0-${index}" value="0" ${currentDays.includes(0) ? 'checked' : ''}>
-          <label for="edit-day-0-${index}">Sat</label>
-          <input type="checkbox" id="edit-day-1-${index}" value="1" ${currentDays.includes(1) ? 'checked' : ''}>
-          <label for="edit-day-1-${index}">Sun</label>
-          <input type="checkbox" id="edit-day-2-${index}" value="2" ${currentDays.includes(2) ? 'checked' : ''}>
-          <label for="edit-day-2-${index}">Mon</label>
-          <input type="checkbox" id="edit-day-3-${index}" value="3" ${currentDays.includes(3) ? 'checked' : ''}>
-          <label for="edit-day-3-${index}">Tue</label>
-          <input type="checkbox" id="edit-day-4-${index}" value="4" ${currentDays.includes(4) ? 'checked' : ''}>
-          <label for="edit-day-4-${index}">Wed</label>
-          <input type="checkbox" id="edit-day-5-${index}" value="5" ${currentDays.includes(5) ? 'checked' : ''}>
-          <label for="edit-day-5-${index}">Thu</label>
-          <input type="checkbox" id="edit-day-6-${index}" value="6" ${currentDays.includes(6) ? 'checked' : ''}>
-          <label for="edit-day-6-${index}">Fri</label>
-        </div>
+        <label>Day:</label>
+        <select id="edit-day-${index}" required>
+          <option value="">Select Day</option>
+        </select>
       </div>
       
-             <div class="edit-section">
-         <label>Status:</label>
-         <div class="edit-toggle-container">
-           <input type="checkbox" id="edit-enabled-${index}" ${currentEnabled ? 'checked' : ''}>
-           <div class="toggle-switch ${currentEnabled ? 'enabled' : 'disabled'}" id="edit-toggle-${index}"></div>
-           <span class="edit-toggle-text">${currentEnabled ? 'Enabled' : 'Disabled'}</span>
-         </div>
-       </div>
+      <div class="edit-section">
+        <label>ON Time:</label>
+        <input type="time" id="edit-on-time-${index}" value="${currentOnTime}" required>
+      </div>
+      
+      <div class="edit-section">
+        <label>OFF Time:</label>
+        <input type="time" id="edit-off-time-${index}" value="${currentOffTime}" required>
+      </div>
+      
+      <div class="edit-section">
+        <label>Status:</label>
+        <div class="edit-toggle-container">
+          <input type="checkbox" id="edit-enabled-${index}" ${currentEnabled ? 'checked' : ''}>
+          <div class="toggle-switch ${currentEnabled ? 'enabled' : 'disabled'}" id="edit-toggle-${index}"></div>
+          <span class="edit-toggle-text">${currentEnabled ? 'Enabled' : 'Disabled'}</span>
+        </div>
+      </div>
     </div>
     
     <div class="edit-actions">
-      <button class="save-btn" onclick="saveAlarmEdit(${index})">Save</button>
-      <button class="cancel-btn" onclick="cancelAlarmEdit(${index})">Cancel</button>
+      <button class="save-btn" onclick="saveScheduleEdit(${index})">Save</button>
+      <button class="cancel-btn" onclick="cancelScheduleEdit(${index})">Cancel</button>
     </div>
   `;
   
   // Hide original elements
-  timeDisplay.style.display = 'none';
-  daysDisplay.style.display = 'none';
+  dateDisplay.style.display = 'none';
+  onTimeDisplay.style.display = 'none';
+  offTimeDisplay.style.display = 'none';
   statusDisplay.style.display = 'none';
   actionsDiv.style.display = 'none';
   
   // Insert edit form
   const scheduleInfo = scheduleItem.querySelector('.schedule-info');
   scheduleInfo.appendChild(editForm);
+  
+  // Add event listener for month change to update day selector
+  const monthSelect = document.getElementById(`edit-month-${index}`);
+  const daySelect = document.getElementById(`edit-day-${index}`);
+  
+  // Populate day selector with current day
+  updateEditDaySelector(index);
+  
+  // Set the current day as selected
+  daySelect.value = day;
+  
+  monthSelect.addEventListener('change', function() {
+    updateEditDaySelector(index);
+  });
   
   // Add event listener for toggle text update and visual feedback
   const toggleCheckbox = document.getElementById(`edit-enabled-${index}`);
@@ -466,27 +493,40 @@ function editAlarm(index) {
   });
 }
 
-function saveAlarmEdit(index) {
-  const newTime = document.getElementById(`edit-time-${index}`).value;
+function saveScheduleEdit(index) {
+  const newMonth = parseInt(document.getElementById(`edit-month-${index}`).value);
+  const newDay = parseInt(document.getElementById(`edit-day-${index}`).value);
+  const newOnTime = document.getElementById(`edit-on-time-${index}`).value;
+  const newOffTime = document.getElementById(`edit-off-time-${index}`).value;
   
-  if (!newTime) {
-    alert("Please select a valid time");
+  if (!newMonth) {
+    alert("Please select a valid month");
     return;
   }
   
-  // Get selected days
-  const selectedDays = [];
-  document.querySelectorAll(`#schedule-${index} .edit-day-checkboxes input[type="checkbox"]:checked`).forEach(checkbox => {
-    selectedDays.push(parseInt(checkbox.value));
-  });
+  if (!newDay) {
+    alert("Please select a valid day");
+    return;
+  }
   
-  if (selectedDays.length === 0) {
-    alert("Please select at least one day");
+  if (!newOnTime) {
+    alert("Please select a valid ON time");
+    return;
+  }
+  
+  if (!newOffTime) {
+    alert("Please select a valid OFF time");
+    return;
+  }
+  
+  if (newOnTime >= newOffTime) {
+    alert("ON time must be before OFF time");
     return;
   }
   
   // Get enabled status
   const newEnabled = document.getElementById(`edit-enabled-${index}`).checked;
+  const newDayOfYear = calculateDayOfYear(newMonth, newDay);
   
   // Send update request to server
   fetch("/schedules/edit", {
@@ -496,37 +536,40 @@ function saveAlarmEdit(index) {
     },
     body: JSON.stringify({ 
       index: index, 
-      time: newTime,
-      days: selectedDays,
+      dayOfYear: newDayOfYear,
+      onTime: newOnTime,
+      offTime: newOffTime,
       enabled: newEnabled
     }),
   })
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
-        cancelAlarmEdit(index);
+        cancelScheduleEdit(index);
         loadSchedules(); // Reload to ensure consistency
       } else {
-        alert("Error updating alarm: " + (data.message || "Unknown error"));
+        alert("Error updating schedule: " + (data.message || "Unknown error"));
       }
     })
     .catch((error) => {
       console.error("Error:", error);
-      alert("Error updating alarm");
+      alert("Error updating schedule");
     });
 }
 
-function cancelAlarmEdit(index) {
+function cancelScheduleEdit(index) {
   const scheduleItem = document.getElementById(`schedule-${index}`);
-  const timeDisplay = document.getElementById(`time-display-${index}`);
-  const daysDisplay = scheduleItem.querySelector('.schedule-days');
+  const dateDisplay = document.getElementById(`date-display-${index}`);
+  const onTimeDisplay = document.getElementById(`on-time-display-${index}`);
+  const offTimeDisplay = document.getElementById(`off-time-display-${index}`);
   const statusDisplay = scheduleItem.querySelector('.schedule-status');
   const actionsDiv = scheduleItem.querySelector('.schedule-actions');
   const editForm = scheduleItem.querySelector('.edit-form');
   
   // Show original elements again
-  timeDisplay.style.display = 'block';
-  daysDisplay.style.display = 'flex';
+  dateDisplay.style.display = 'block';
+  onTimeDisplay.style.display = 'inline';
+  offTimeDisplay.style.display = 'inline';
   statusDisplay.style.display = 'flex';
   actionsDiv.style.display = 'flex';
   

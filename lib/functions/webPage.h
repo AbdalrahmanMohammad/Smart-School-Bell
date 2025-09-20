@@ -235,9 +235,11 @@ void handleSchedules()
         return;
     }
 
-    String json = file.readString();
+    // Just return the raw file content - no parsing needed!
+    String jsonData = file.readString();
     file.close();
-    server.send(200, "application/json", json);
+    
+    server.send(200, "application/json", jsonData);
 }
 
 void handleAddSchedule()
@@ -260,9 +262,10 @@ void handleAddSchedule()
 
         delete cachedSchedulesDoc; // Free existing cache
         cachedSchedulesDoc = nullptr;
+        cachedDayOfYear = -1; // Reset cached day
         // Read current schedules
         File file = LittleFS.open("/schedules.json", "r");
-        DynamicJsonDocument schedulesDoc(16384); // 16KB for large number of schedules
+        DynamicJsonDocument schedulesDoc(10240); // 10KB should be enough for 100 schedules
 
         if (file)
         {
@@ -283,23 +286,24 @@ void handleAddSchedule()
             schedulesDoc.createNestedArray("schedules");
         }
 
-        // Check alarm limit (50 alarms maximum)
+        // Check schedule limit (365 schedules maximum)
         JsonArray schedules = schedulesDoc["schedules"];
-        if (schedules.size() >= 50)
+        if (schedules.size() >= 365)
         {
-            dbgln("Error: Maximum number of alarms (50) reached");
-            server.send(400, "application/json", "{\"success\":false,\"message\":\"Maximum number of alarms (50) reached. Please delete some alarms before adding new ones.\"}");
+            dbgln("Error: Maximum number of schedules (365) reached");
+            server.send(400, "application/json", "{\"success\":false,\"message\":\"Maximum number of schedules (365) reached. Please delete some schedules before adding new ones.\"}");
             return;
         }
 
         // Add the new schedule
         JsonObject newSchedule = schedules.createNestedObject();
 
-        // Copy all fields from the new schedule
-        for (JsonPair kv : newScheduleDoc.as<JsonObject>())
-        {
-            newSchedule[kv.key()] = kv.value();
-        }
+        // Copy all fields from the new schedule (keep full format)
+        newSchedule["dayOfYear"] = newScheduleDoc["dayOfYear"];
+        newSchedule["onTime"] = newScheduleDoc["onTime"];
+        newSchedule["offTime"] = newScheduleDoc["offTime"];
+        newSchedule["enabled"] = newScheduleDoc["enabled"];
+        newSchedule["type"] = newScheduleDoc["type"];
 
         // Write back to file
         File writeFile = LittleFS.open("/schedules.json", "w");
@@ -376,7 +380,7 @@ void handleDeleteSchedule()
     cachedSchedulesDoc = nullptr;
 
     // Parse schedules
-    DynamicJsonDocument schedulesDoc(16384); // 16KB for large number of schedules
+    DynamicJsonDocument schedulesDoc(40960); // 40KB for 365 schedules
     error = deserializeJson(schedulesDoc, fileContent);
 
     if (error)
@@ -432,7 +436,7 @@ void handleEditSchedule()
 
     // Get and parse the request data
     String jsonData = server.arg("plain");
-    StaticJsonDocument<256> requestDoc;
+    StaticJsonDocument<512> requestDoc;
     DeserializationError error = deserializeJson(requestDoc, jsonData);
 
     if (error)
@@ -444,8 +448,9 @@ void handleEditSchedule()
 
     // Get the edit data
     int index = requestDoc["index"];
-    const char *newTime = requestDoc["time"];
-    JsonArray newDays = requestDoc["days"];
+    int newDayOfYear = requestDoc["dayOfYear"];
+    const char *newOnTime = requestDoc["onTime"];
+    const char *newOffTime = requestDoc["offTime"];
     bool newEnabled = requestDoc["enabled"];
 
     // Open and read schedules file
@@ -463,7 +468,7 @@ void handleEditSchedule()
     delete cachedSchedulesDoc; // Free existing cache
     cachedSchedulesDoc = nullptr;
     // Parse schedules
-    DynamicJsonDocument schedulesDoc(16384); // 16KB for large number of schedules
+    DynamicJsonDocument schedulesDoc(10240); // 10KB should be enough for 50 schedules
     error = deserializeJson(schedulesDoc, fileContent);
 
     if (error)
@@ -485,16 +490,10 @@ void handleEditSchedule()
     // Update the schedule
     JsonObject schedule = schedules[index];
 
-    // Update time
-    schedule["time"] = newTime;
-
-    // Update days array
-    schedule.remove("days");
-    JsonArray daysArray = schedule.createNestedArray("days");
-    for (JsonVariant day : newDays)
-    {
-        daysArray.add(day.as<int>());
-    }
+    // Update day of year and times (full format)
+    schedule["dayOfYear"] = newDayOfYear;
+    schedule["onTime"] = newOnTime;
+    schedule["offTime"] = newOffTime;
 
     // Update enabled status
     schedule["enabled"] = newEnabled;
