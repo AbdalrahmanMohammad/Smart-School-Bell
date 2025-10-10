@@ -106,16 +106,15 @@ void loadTodaysSchedulesToCache()
         
         for (JsonObject schedule : allSchedules)
         {
-            if (schedule["dayOfYear"].as<int>() == currentDayOfYear)
+            if (schedule["d"].as<int>() == currentDayOfYear)
             {
                 JsonObject todaySchedule = todaySchedules.createNestedObject();
-                todaySchedule["dayOfYear"] = schedule["dayOfYear"];
-                todaySchedule["onTime"] = schedule["onTime"];
-                todaySchedule["offTime"] = schedule["offTime"];
-                todaySchedule["enabled"] = schedule["enabled"];
-                todaySchedule["type"] = schedule["type"];
+                todaySchedule["d"] = schedule["d"];
+                todaySchedule["on"] = schedule["on"];
+                todaySchedule["off"] = schedule["off"];
+                todaySchedule["e"] = schedule["e"];
                 foundToday = true;
-                dbgln("Found today's schedule: " + schedule["onTime"].as<String>() + " to " + schedule["offTime"].as<String>() + " (" + schedule["type"].as<String>() + ")");
+                dbgln("Found today's schedule: " + schedule["on"].as<String>() + " to " + schedule["off"].as<String>() + " (bulb)");
                 break;
             }
         }
@@ -144,13 +143,12 @@ void loadTodaysSchedulesToCache()
         
         if (line.length() == 0) continue;
         
-        // Parse: dayOfYear,onTime,offTime,enabled,type
+        // Parse: d,on,off,e (optimized format)
         int firstComma = line.indexOf(',');
         int secondComma = line.indexOf(',', firstComma + 1);
         int thirdComma = line.indexOf(',', secondComma + 1);
-        int fourthComma = line.indexOf(',', thirdComma + 1);
         
-        if (firstComma == -1 || secondComma == -1 || thirdComma == -1 || fourthComma == -1) {
+        if (firstComma == -1 || secondComma == -1 || thirdComma == -1) {
             continue; // Skip malformed lines
         }
         
@@ -160,18 +158,16 @@ void loadTodaysSchedulesToCache()
             // Found today's schedule!
             String onTime = line.substring(firstComma + 1, secondComma);
             String offTime = line.substring(secondComma + 1, thirdComma);
-            bool enabled = line.substring(thirdComma + 1, fourthComma).toInt() == 1;
-            String type = line.substring(fourthComma + 1);
+            bool enabled = line.substring(thirdComma + 1).toInt() == 1;
             
             JsonObject todaySchedule = todaySchedules.createNestedObject();
-            todaySchedule["dayOfYear"] = dayOfYear;
-            todaySchedule["onTime"] = onTime;
-            todaySchedule["offTime"] = offTime;
-            todaySchedule["enabled"] = enabled;
-            todaySchedule["type"] = type;
+            todaySchedule["d"] = dayOfYear;
+            todaySchedule["on"] = onTime;
+            todaySchedule["off"] = offTime;
+            todaySchedule["e"] = enabled;
             foundToday = true;
             
-            dbgln("Found today's schedule: " + onTime + " to " + offTime + " (" + type + ")");
+            dbgln("Found today's schedule: " + onTime + " to " + offTime + " (bulb)");
             break; // Found today's schedule, no need to continue reading
         }
     }
@@ -245,61 +241,39 @@ void checkSchedules()
     for (JsonObject schedule : schedules)
     {
         // Check if schedule is enabled
-        if (!schedule["enabled"].as<bool>())
+        if (!schedule["e"].as<bool>())
         {
             continue;
         }
 
         // Check if current day of year matches schedule day of year
-        int scheduleDayOfYear = schedule["dayOfYear"];
+        int scheduleDayOfYear = schedule["d"];
         if (scheduleDayOfYear != currentDayOfYear)
         {
             continue; // Day of year doesn't match
         }
 
         // Check if current time matches ON time
-        const char *onTime = schedule["onTime"];
+        const char *onTime = schedule["on"];
         if (strcmp(onTime, currentTime.c_str()) == 0)
         {
-            // ON time matches! Turn on the device
-            const char *type = schedule["type"];
-            if (strcmp(type, "bulb") == 0)
-            {
-                dbg("Turning ON bulb at scheduled time: ");
-                dbgln(onTime);
-                bulb.on();
-                lastTriggeredTime = currentTime; // Mark this time as triggered
-            }
-            else if (strcmp(type, "led") == 0)
-            {
-                dbg("Turning ON LED at scheduled time: ");
-                dbgln(onTime);
-                led.on();
-                lastTriggeredTime = currentTime; // Mark this time as triggered
-            }
+            // ON time matches! Turn on the bulb
+            dbg("Turning ON bulb at scheduled time: ");
+            dbgln(onTime);
+            bulb.on();
+            lastTriggeredTime = currentTime; // Mark this time as triggered
         }
         // Check if current time matches OFF time
         else
         {
-            const char *offTime = schedule["offTime"];
+            const char *offTime = schedule["off"];
             if (strcmp(offTime, currentTime.c_str()) == 0)
             {
-                // OFF time matches! Turn off the device
-                const char *type = schedule["type"];
-                if (strcmp(type, "bulb") == 0)
-                {
-                    dbg("Turning OFF bulb at scheduled time: ");
-                    dbgln(offTime);
-                    bulb.off();
-                    lastTriggeredTime = currentTime; // Mark this time as triggered
-                }
-                else if (strcmp(type, "led") == 0)
-                {
-                    dbg("Turning OFF LED at scheduled time: ");
-                    dbgln(offTime);
-                    led.off();
-                    lastTriggeredTime = currentTime; // Mark this time as triggered
-                }
+                // OFF time matches! Turn off the bulb
+                dbg("Turning OFF bulb at scheduled time: ");
+                dbgln(offTime);
+                bulb.off();
+                lastTriggeredTime = currentTime; // Mark this time as triggered
             }
         }
     }

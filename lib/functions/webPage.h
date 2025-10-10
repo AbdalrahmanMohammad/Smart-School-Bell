@@ -151,10 +151,10 @@ void handleEditSchedule()
 
     // Get the edit data
     int index = requestDoc["index"];
-    int newDayOfYear = requestDoc["dayOfYear"];
-    const char *newOnTime = requestDoc["onTime"];
-    const char *newOffTime = requestDoc["offTime"];
-    bool newEnabled = requestDoc["enabled"];
+    int newDayOfYear = requestDoc["d"];
+    const char *newOnTime = requestDoc["on"];
+    const char *newOffTime = requestDoc["off"];
+    bool newEnabled = requestDoc["e"];
 
     // Open and read schedules file
     File file = LittleFS.open("/schedules.json", "r");
@@ -193,13 +193,13 @@ void handleEditSchedule()
     // Update the schedule
     JsonObject schedule = schedules[index];
 
-    // Update day of year and times (full format)
-    schedule["dayOfYear"] = newDayOfYear;
-    schedule["onTime"] = newOnTime;
-    schedule["offTime"] = newOffTime;
+    // Update day of year and times (optimized format)
+    schedule["d"] = newDayOfYear;
+    schedule["on"] = newOnTime;
+    schedule["off"] = newOffTime;
 
     // Update enabled status
-    schedule["enabled"] = newEnabled;
+    schedule["e"] = newEnabled;
 
     // Write back to file
     File writeFile = LittleFS.open("/schedules.json", "w");

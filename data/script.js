@@ -189,9 +189,9 @@ function displaySchedules(schedules) {
 
   let html = "";
   schedules.forEach((schedule, index) => {
-    const statusClass = schedule.enabled ? "enabled" : "disabled";
-    const statusText = schedule.enabled ? "ENABLED" : "DISABLED";
-    const formattedDate = formatDayOfYear(schedule.dayOfYear);
+    const statusClass = schedule.e ? "enabled" : "disabled";
+    const statusText = schedule.e ? "ENABLED" : "DISABLED";
+    const formattedDate = formatDayOfYear(schedule.d);
 
     html += `
       <div class="schedule-item" id="schedule-${index}">
@@ -206,13 +206,13 @@ function displaySchedules(schedules) {
           <div class="schedule-times">
             <div class="time-slot">
               <span class="time-label">ON:</span>
-              <span class="time-value" id="on-time-display-${index}">${schedule.onTime}</span>
+              <span class="time-value" id="on-time-display-${index}">${schedule.on}</span>
             </div>
             <div class="time-slot">
               <span class="time-label">OFF:</span>
-              <span class="time-value" id="off-time-display-${index}">${schedule.offTime}</span>
+              <span class="time-value" id="off-time-display-${index}">${schedule.off}</span>
             </div>
-            <span class="type-badge">${(schedule.type || 'led').toUpperCase()}</span>
+            <span class="type-badge">BULB</span>
           </div>
         </div>
         <div class="schedule-actions">
@@ -339,10 +339,10 @@ function editSchedule(index) {
   }
   
   const currentSchedule = window.currentSchedules[index];
-  const currentEnabled = currentSchedule.enabled;
-  const currentDayOfYear = currentSchedule.dayOfYear;
-  const currentOnTime = currentSchedule.onTime;
-  const currentOffTime = currentSchedule.offTime;
+  const currentEnabled = currentSchedule.e;
+  const currentDayOfYear = currentSchedule.d;
+  const currentOnTime = currentSchedule.on;
+  const currentOffTime = currentSchedule.off;
   
   // Convert day of year to month and day
   const monthNames = ["January", "February", "March", "April", "May", "June",
@@ -510,10 +510,10 @@ function saveScheduleEdit(index) {
     },
     body: JSON.stringify({ 
       index: index, 
-      dayOfYear: newDayOfYear,
-      onTime: newOnTime,
-      offTime: newOffTime,
-      enabled: newEnabled
+      d: newDayOfYear,
+      on: newOnTime,
+      off: newOffTime,
+      e: newEnabled
     }),
   })
     .then((response) => response.json())
