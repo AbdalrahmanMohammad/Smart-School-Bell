@@ -156,7 +156,7 @@ void handleEditSchedule()
     const char *newOffTime = requestDoc["off"];
     bool newEnabled = requestDoc["e"];
 
-    // Open and read schedules file
+    // Use streaming approach to avoid memory issues
     File file = LittleFS.open("/schedules.json", "r");
     if (!file)
     {
@@ -165,57 +165,121 @@ void handleEditSchedule()
         return;
     }
 
-    String fileContent = file.readString();
-    file.close();
-
-    delete cachedSchedulesDoc; // Free existing cache
-    cachedSchedulesDoc = nullptr;
-    // Parse schedules
-    DynamicJsonDocument schedulesDoc(10240); // 10KB should be enough for 50 schedules
-    error = deserializeJson(schedulesDoc, fileContent);
-
-    if (error)
+    // Create temporary file for writing
+    File tempFile = LittleFS.open("/schedules_temp.json", "w");
+    if (!tempFile)
     {
-        dbgln("Error: Failed to parse schedules file");
-        server.send(400, "application/json", "{\"success\":false}");
-        return;
-    }
-
-    // Get schedules array and validate index
-    JsonArray schedules = schedulesDoc["schedules"];
-    if (index < 0 || index >= (int)schedules.size())
-    {
-        dbgln("Error: Invalid schedule index");
-        server.send(400, "application/json", "{\"success\":false}");
-        return;
-    }
-
-    // Update the schedule
-    JsonObject schedule = schedules[index];
-
-    // Update day of year and times (optimized format)
-    schedule["d"] = newDayOfYear;
-    schedule["on"] = newOnTime;
-    schedule["off"] = newOffTime;
-
-    // Update enabled status
-    schedule["e"] = newEnabled;
-
-    // Write back to file
-    File writeFile = LittleFS.open("/schedules.json", "w");
-    if (!writeFile)
-    {
-        dbgln("Error: Failed to write schedules file");
+        dbgln("Error: Failed to create temp file");
+        file.close();
         server.send(500, "application/json", "{\"success\":false}");
         return;
     }
 
-    serializeJson(schedulesDoc, writeFile);
-    writeFile.close();
-
-    dbgln("Schedule edited successfully");
-    // loadSchedulesToCache(); // not necessary, check schedules will do it since cachedSchedulesDoc == nullptr
-    server.send(200, "application/json", "{\"success\":true}");
+    // Write opening bracket
+    tempFile.print("{\"schedules\":[");
+    
+    bool firstSchedule = true;
+    int currentIndex = 0;
+    String line;
+    
+    // Skip the opening part of the file
+    file.readStringUntil('[');
+    
+    while (file.available() && currentIndex < 366)
+    {
+        // Read until next schedule object
+        String scheduleStr = "";
+        int braceCount = 0;
+        bool inSchedule = false;
+        
+        while (file.available())
+        {
+            char c = file.read();
+            
+            if (c == '{')
+            {
+                braceCount++;
+                inSchedule = true;
+            }
+            else if (c == '}')
+            {
+                braceCount--;
+            }
+            
+            scheduleStr += c;
+            
+            if (inSchedule && braceCount == 0)
+            {
+                break;
+            }
+        }
+        
+        if (scheduleStr.length() > 0)
+        {
+            // Add comma if not first schedule
+            if (!firstSchedule)
+            {
+                tempFile.print(",");
+            }
+            
+            if (currentIndex == index)
+            {
+                // Write the modified schedule
+                tempFile.print("{\"d\":");
+                tempFile.print(newDayOfYear);
+                tempFile.print(",\"on\":\"");
+                tempFile.print(newOnTime);
+                tempFile.print("\",\"off\":\"");
+                tempFile.print(newOffTime);
+                tempFile.print("\",\"e\":");
+                tempFile.print(newEnabled ? "true" : "false");
+                tempFile.print("}");
+            }
+            else
+            {
+                // Write the original schedule
+                tempFile.print(scheduleStr);
+            }
+            
+            firstSchedule = false;
+            currentIndex++;
+        }
+        
+        // Skip comma and whitespace
+        while (file.available())
+        {
+            char c = file.read();
+            if (c == ',' || c == ' ' || c == '\n' || c == '\r' || c == '\t')
+            {
+                continue;
+            }
+            else
+            {
+                // Put the character back by seeking back one position
+                file.seek(file.position() - 1);
+                break;
+            }
+        }
+    }
+    
+    // Write closing brackets
+    tempFile.print("]}");
+    
+    file.close();
+    tempFile.close();
+    
+    // Replace original file with temp file
+    if (LittleFS.remove("/schedules.json"))
+    {
+        LittleFS.rename("/schedules_temp.json", "/schedules.json");
+        dbgln("Schedule edited successfully");
+        server.send(200, "application/json", "{\"success\":true}");
+    }
+    else
+    {
+        dbgln("Error: Failed to replace schedules file");
+        server.send(500, "application/json", "{\"success\":false}");
+    }
 }
 
 void handleSendTime()
