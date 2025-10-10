@@ -90,48 +90,8 @@ void handleLEDToggle()
 }
 
 // ===== Config helpers =====
-static const char *CONFIG_PATH = "/config.json";
+// Config is now handled by LED class - no duplicate functions needed
 
-static void loadConfigOrDefaults(StaticJsonDocument<256> &cfg)
-{
-    cfg.clear();
-    File f = LittleFS.open(CONFIG_PATH, "r");
-    if (!f)
-    {
-        // defaults
-        // Bulb is simple on/off - no duration needed
-        cfg["ledOn"] = false;
-        return;
-    }
-    String content = f.readString();
-    f.close();
-    DeserializationError err = deserializeJson(cfg, content);
-    if (err)
-    {
-        cfg.clear();
-        // Bulb is simple on/off - no duration needed
-        cfg["ledOn"] = false;
-    }
-}
-
-static bool saveConfig(const StaticJsonDocument<256> &cfg)
-{
-    File f = LittleFS.open(CONFIG_PATH, "w");
-    if (!f)
-        return false;
-    serializeJson(cfg, f);
-    f.close();
-    return true;
-}
-
-void handleGetConfig()
-{
-    StaticJsonDocument<256> cfg;
-    loadConfigOrDefaults(cfg);
-    String json;
-    serializeJson(cfg, json);
-    server.send(200, "application/json", json);
-}
 
 // Bulb duration handler removed - bulb is simple on/off only
 
@@ -165,187 +125,7 @@ void handleSchedules()
     server.send(200, "application/json", jsonData);
 }
 
-void handleAddSchedule()
-{
-    if (server.hasArg("plain"))
-    {
-        String jsonData = server.arg("plain");
-        dbgln("Adding new schedule...");
 
-        // Parse the new schedule
-        DynamicJsonDocument newScheduleDoc(1024);
-        DeserializationError error = deserializeJson(newScheduleDoc, jsonData);
-
-        if (error)
-        {
-            dbgln("Error: Failed to parse schedule JSON");
-            server.send(400, "application/json", "{\"success\":false,\"message\":\"Invalid JSON format\"}");
-            return;
-        }
-
-        delete cachedSchedulesDoc; // Free existing cache
-        cachedSchedulesDoc = nullptr;
-        cachedDayOfYear = -1; // Reset cached day
-        // Read current schedules
-        File file = LittleFS.open("/schedules.json", "r");
-        DynamicJsonDocument schedulesDoc(10240); // 10KB should be enough for 100 schedules
-
-        if (file)
-        {
-            String currentJson = file.readString();
-            file.close();
-
-            error = deserializeJson(schedulesDoc, currentJson);
-            if (error)
-            {
-                dbgln("Warning: Corrupted schedules file, creating fresh");
-                schedulesDoc.clear();
-                schedulesDoc.createNestedArray("schedules");
-            }
-        }
-        else
-        {
-            // File doesn't exist, create new structure
-            schedulesDoc.createNestedArray("schedules");
-        }
-
-        // Check schedule limit (365 schedules maximum)
-        JsonArray schedules = schedulesDoc["schedules"];
-        if (schedules.size() >= 365)
-        {
-            dbgln("Error: Maximum number of schedules (365) reached");
-            server.send(400, "application/json", "{\"success\":false,\"message\":\"Maximum number of schedules (365) reached. Please delete some schedules before adding new ones.\"}");
-            return;
-        }
-
-        // Add the new schedule
-        JsonObject newSchedule = schedules.createNestedObject();
-
-        // Copy all fields from the new schedule (keep full format)
-        newSchedule["dayOfYear"] = newScheduleDoc["dayOfYear"];
-        newSchedule["onTime"] = newScheduleDoc["onTime"];
-        newSchedule["offTime"] = newScheduleDoc["offTime"];
-        newSchedule["enabled"] = newScheduleDoc["enabled"];
-        newSchedule["type"] = newScheduleDoc["type"];
-
-        // Write back to file
-        File writeFile = LittleFS.open("/schedules.json", "w");
-        if (writeFile)
-        {
-            serializeJson(schedulesDoc, writeFile);
-            writeFile.close();
-
-            dbgln("Schedule added successfully");
-            // loadSchedulesToCache(); // not necessary, check schedules will do it since cachedSchedulesDoc == nullptr
-            server.send(200, "application/json", "{\"success\":true}");
-        }
-        else
-        {
-            dbgln("Error: Failed to write schedules file");
-            server.send(500, "application/json", "{\"success\":false,\"message\":\"Failed to write file\"}");
-        }
-    }
-    else
-    {
-        dbgln("Error: No schedule data received");
-        server.send(400, "application/json", "{\"success\":false,\"message\":\"No data received\"}");
-    }
-}
-
-void handleDeleteSchedule()
-{
-    dbgln("Delete request received");
-
-    // Check if we have POST data
-    if (!server.hasArg("plain"))
-    {
-        dbgln("Error: No POST data");
-        server.send(400, "application/json", "{\"success\":false}");
-        return;
-    }
-
-    // Get and parse the request data
-    String jsonData = server.arg("plain");
-    dbg("Delete request data: ");
-    dbgln(jsonData);
-
-    StaticJsonDocument<64> requestDoc;
-    DeserializationError error = deserializeJson(requestDoc, jsonData);
-
-    if (error)
-    {
-        dbg("Parse error: ");
-        dbgln(error.c_str());
-        server.send(400, "application/json", "{\"success\":false}");
-        return;
-    }
-
-    // Get the index to delete
-    int index = requestDoc["index"];
-    dbg("Index to delete: ");
-    dbgln(index);
-
-    // Open and read schedules file
-    File file = LittleFS.open("/schedules.json", "r");
-    if (!file)
-    {
-        dbgln("Error: File not found");
-        server.send(404, "application/json", "{\"success\":false}");
-        return;
-    }
-
-    String fileContent = file.readString();
-    file.close();
-    dbg("File size: ");
-    dbgln(fileContent.length());
-
-    delete cachedSchedulesDoc; // Free existing cache
-    cachedSchedulesDoc = nullptr;
-
-    // Parse schedules
-    DynamicJsonDocument schedulesDoc(40960); // 40KB for 365 schedules
-    error = deserializeJson(schedulesDoc, fileContent);
-
-    if (error)
-    {
-        dbg("Schedule parse error: ");
-        dbgln(error.c_str());
-        server.send(400, "application/json", "{\"success\":false}");
-        return;
-    }
-
-    // Get schedules array and validate index
-    JsonArray schedules = schedulesDoc["schedules"];
-    int count = schedules.size();
-    dbg("Total schedules: ");
-    dbgln(count);
-
-    if (index < 0 || index >= count)
-    {
-        dbgln("Error: Invalid index");
-        server.send(400, "application/json", "{\"success\":false}");
-        return;
-    }
-
-    // Remove the schedule and write back to file
-    schedules.remove(index);
-    dbgln("Schedule removed from array");
-
-    File writeFile = LittleFS.open("/schedules.json", "w");
-    if (!writeFile)
-    {
-        dbgln("Error: Failed to open file for writing");
-        server.send(500, "application/json", "{\"success\":false}");
-        return;
-    }
-
-    serializeJson(schedulesDoc, writeFile);
-    writeFile.close();
-
-    dbgln("Schedule deleted successfully");
-    // loadSchedulesToCache(); // not necessary, check schedules will do it since cachedSchedulesDoc == nullptr
-    server.send(200, "application/json", "{\"success\":true}");
-}
 
 void handleEditSchedule()
 {
@@ -517,13 +297,10 @@ void WifiSetup()
     server.on("/led/toggle", HTTP_POST, handleLEDToggle);
     server.on("/bulb/toggle", HTTP_POST, handleBulbToggle);
     server.on("/schedules", handleSchedules);
-    server.on("/schedules/add", HTTP_POST, handleAddSchedule);
-    server.on("/schedules/delete", HTTP_POST, handleDeleteSchedule);
     server.on("/schedules/edit", HTTP_POST, handleEditSchedule); // Added edit route
     server.on("/send-time", HTTP_POST, handleSendTime);          // Added send-time route
 
-    // Config endpoints
-    server.on("/config", handleGetConfig);
+    // Config endpoints removed - LED class handles config directly
     // Bulb duration endpoint removed - bulb is simple on/off only
     server.begin();
     dbgln("Web server started");
