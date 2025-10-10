@@ -163,66 +163,116 @@ function loadConfig() {
 
 // Bulb duration function removed - bulb is simple on/off only
 
+// Global variable to store all schedules
+let allSchedules = [];
+
 function displaySchedules(schedules) {
   console.log("displaySchedules called with:", schedules);
-  const container = document.getElementById("schedules-list");
   
   if (!schedules) {
     console.error("Schedules is undefined or null");
-    container.innerHTML = "<p>Error: No schedules data</p>";
+    document.getElementById("schedules-list").innerHTML = "<p>Error: No schedules data</p>";
     return;
   }
   
-  // Store schedules globally so edit function can access them
+  // Store all schedules globally for filtering
+  allSchedules = schedules;
   window.currentSchedules = schedules;
   
-  // Update schedule counter
-  const scheduleCounter = document.getElementById("current-schedule-count");
-  if (scheduleCounter) {
-    scheduleCounter.textContent = schedules.length;
+  // Update total schedule counter
+  const totalCounter = document.getElementById("total-schedule-count");
+  if (totalCounter) {
+    totalCounter.textContent = schedules.length;
   }
 
   if (schedules.length === 0) {
-    container.innerHTML = "<p>No schedules configured</p>";
+    document.getElementById("schedules-list").innerHTML = "<p>No schedules configured</p>";
+    return;
+  }
+
+  // Apply current filter
+  filterSchedulesByMonth();
+}
+
+function filterSchedulesByMonth() {
+  const monthFilter = document.getElementById("month-filter");
+  const selectedMonth = monthFilter.value;
+  const container = document.getElementById("schedules-list");
+  const scheduleCounter = document.getElementById("current-schedule-count");
+  
+  if (!allSchedules || allSchedules.length === 0) {
+    container.innerHTML = "<p>No schedules found</p>";
+    if (scheduleCounter) scheduleCounter.textContent = "0";
+    return;
+  }
+  
+  const targetMonth = parseInt(selectedMonth);
+  const filteredSchedules = allSchedules.filter(schedule => {
+    const month = getMonthFromDayOfYear(schedule.d);
+    return month === targetMonth;
+  });
+  
+  if (scheduleCounter) {
+    scheduleCounter.textContent = filteredSchedules.length;
+  }
+
+  if (filteredSchedules.length === 0) {
+    container.innerHTML = "<p>No schedules found for selected month</p>";
     return;
   }
 
   let html = "";
-  schedules.forEach((schedule, index) => {
+  filteredSchedules.forEach((schedule, originalIndex) => {
+    // Find the original index in the full array
+    const actualIndex = allSchedules.findIndex(s => s === schedule);
+    
     const statusClass = schedule.e ? "enabled" : "disabled";
     const statusText = schedule.e ? "ENABLED" : "DISABLED";
     const formattedDate = formatDayOfYear(schedule.d);
 
     html += `
-      <div class="schedule-item" id="schedule-${index}">
-        <div class="schedule-index">#${index + 1}</div>
+      <div class="schedule-item" id="schedule-${actualIndex}">
+        <div class="schedule-index">#${actualIndex + 1}</div>
         <div class="schedule-info">
           <div class="schedule-date-row">
-            <div class="schedule-date" id="date-display-${index}">${formattedDate}</div>
-            <div class="schedule-status ${statusClass}" onclick="toggleScheduleStatus(${index})">
+            <div class="schedule-date" id="date-display-${actualIndex}">${formattedDate}</div>
+            <div class="schedule-status ${statusClass}" onclick="toggleScheduleStatus(${actualIndex})">
               <div class="toggle-switch ${statusClass}"></div>
             </div>
           </div>
           <div class="schedule-times">
             <div class="time-slot">
               <span class="time-label">ON:</span>
-              <span class="time-value" id="on-time-display-${index}">${schedule.on}</span>
+              <span class="time-value" id="on-time-display-${actualIndex}">${schedule.on}</span>
             </div>
             <div class="time-slot">
               <span class="time-label">OFF:</span>
-              <span class="time-value" id="off-time-display-${index}">${schedule.off}</span>
+              <span class="time-value" id="off-time-display-${actualIndex}">${schedule.off}</span>
             </div>
             <span class="type-badge">BULB</span>
           </div>
         </div>
         <div class="schedule-actions">
-          <button class="edit-btn" onclick="editSchedule(${index})">Edit</button>
+          <button class="edit-btn" onclick="editSchedule(${actualIndex})">Edit</button>
         </div>
       </div>
     `;
   });
 
   container.innerHTML = html;
+}
+
+function getMonthFromDayOfYear(dayOfYear) {
+  const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  let month = 0;
+  let day = dayOfYear;
+  
+  while (day > daysInMonth[month]) {
+    day -= daysInMonth[month];
+    month++;
+  }
+  
+  return month + 1; // Return 1-based month
 }
 
 function formatDayOfYear(dayOfYear) {
@@ -282,30 +332,7 @@ function calculateDayOfYear(month, day) {
   return dayOfYear + day;
 }
 
-// Function to update edit day selector
-function updateEditDaySelector(index) {
-  const monthSelect = document.getElementById(`edit-month-${index}`);
-  const daySelect = document.getElementById(`edit-day-${index}`);
-  
-  if (!monthSelect || !daySelect) return;
-  
-  const selectedMonth = parseInt(monthSelect.value);
-  if (!selectedMonth) {
-    daySelect.innerHTML = '<option value="">Select Day</option>';
-    return;
-  }
-  
-  const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  const maxDays = daysInMonth[selectedMonth - 1];
-  
-  daySelect.innerHTML = '<option value="">Select Day</option>';
-  for (let day = 1; day <= maxDays; day++) {
-    const option = document.createElement('option');
-    option.value = day;
-    option.textContent = day;
-    daySelect.appendChild(option);
-  }
-}
+// updateEditDaySelector function removed - date is now read-only
 
 // updateAddButtonState function removed - no longer needed
 
@@ -363,29 +390,12 @@ function editSchedule(index) {
   editForm.innerHTML = `
     <div class="edit-content">
       <div class="edit-section">
-        <label>Month:</label>
-        <select id="edit-month-${index}" required>
-          <option value="">Select Month</option>
-          <option value="1" ${month === 1 ? 'selected' : ''}>January</option>
-          <option value="2" ${month === 2 ? 'selected' : ''}>February</option>
-          <option value="3" ${month === 3 ? 'selected' : ''}>March</option>
-          <option value="4" ${month === 4 ? 'selected' : ''}>April</option>
-          <option value="5" ${month === 5 ? 'selected' : ''}>May</option>
-          <option value="6" ${month === 6 ? 'selected' : ''}>June</option>
-          <option value="7" ${month === 7 ? 'selected' : ''}>July</option>
-          <option value="8" ${month === 8 ? 'selected' : ''}>August</option>
-          <option value="9" ${month === 9 ? 'selected' : ''}>September</option>
-          <option value="10" ${month === 10 ? 'selected' : ''}>October</option>
-          <option value="11" ${month === 11 ? 'selected' : ''}>November</option>
-          <option value="12" ${month === 12 ? 'selected' : ''}>December</option>
-        </select>
-      </div>
-      
-      <div class="edit-section">
-        <label>Day:</label>
-        <select id="edit-day-${index}" required>
-          <option value="">Select Day</option>
-        </select>
+        <label>Date:</label>
+        <div class="readonly-field">
+          <span class="readonly-text">${monthNames[month - 1]} ${day}</span>
+          <input type="hidden" id="edit-month-${index}" value="${month}">
+          <input type="hidden" id="edit-day-${index}" value="${day}">
+        </div>
       </div>
       
       <div class="edit-section">
@@ -425,19 +435,7 @@ function editSchedule(index) {
   const scheduleInfo = scheduleItem.querySelector('.schedule-info');
   scheduleInfo.appendChild(editForm);
   
-  // Add event listener for month change to update day selector
-  const monthSelect = document.getElementById(`edit-month-${index}`);
-  const daySelect = document.getElementById(`edit-day-${index}`);
-  
-  // Populate day selector with current day
-  updateEditDaySelector(index);
-  
-  // Set the current day as selected
-  daySelect.value = day;
-  
-  monthSelect.addEventListener('change', function() {
-    updateEditDaySelector(index);
-  });
+  // Month and day selectors removed - date is now read-only
   
   // Add event listener for toggle text update and visual feedback
   const toggleCheckbox = document.getElementById(`edit-enabled-${index}`);
@@ -473,15 +471,7 @@ function saveScheduleEdit(index) {
   const newOnTime = document.getElementById(`edit-on-time-${index}`).value;
   const newOffTime = document.getElementById(`edit-off-time-${index}`).value;
   
-  if (!newMonth) {
-    alert("Please select a valid month");
-    return;
-  }
-  
-  if (!newDay) {
-    alert("Please select a valid day");
-    return;
-  }
+  // Month and day validation removed - they are now read-only hidden fields
   
   if (!newOnTime) {
     alert("Please select a valid ON time");
