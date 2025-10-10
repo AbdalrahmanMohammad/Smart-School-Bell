@@ -263,11 +263,11 @@ void checkSchedules()
         {
             // ON time matches! Turn on the device
             const char *type = schedule["type"];
-            if (strcmp(type, "bell") == 0)
+            if (strcmp(type, "bulb") == 0)
             {
-                dbg("Turning ON bell at scheduled time: ");
+                dbg("Turning ON bulb at scheduled time: ");
                 dbgln(onTime);
-                bell.on();
+                bulb.on();
                 lastTriggeredTime = currentTime; // Mark this time as triggered
             }
             else if (strcmp(type, "led") == 0)
@@ -286,11 +286,11 @@ void checkSchedules()
             {
                 // OFF time matches! Turn off the device
                 const char *type = schedule["type"];
-                if (strcmp(type, "bell") == 0)
+                if (strcmp(type, "bulb") == 0)
                 {
-                    dbg("Turning OFF bell at scheduled time: ");
+                    dbg("Turning OFF bulb at scheduled time: ");
                     dbgln(offTime);
-                    bell.off();
+                    bulb.off();
                     lastTriggeredTime = currentTime; // Mark this time as triggered
                 }
                 else if (strcmp(type, "led") == 0)
@@ -308,7 +308,7 @@ void checkSchedules()
 void controlDevices()
 {
     led.loop();
-    bell.loop();
+    bulb.loop();
     checkSchedules(); // Add schedule checking
 }
 
@@ -326,10 +326,6 @@ void applySavedConfig()
             cfg.clear();
         }
     }
-
-    // Bell duration
-    unsigned long bellDurationMs = cfg.containsKey("bellDurationMs") ? cfg["bellDurationMs"].as<unsigned long>() : 3000UL;
-    bell.setDuration(bellDurationMs);
 
     // LED last state
     bool ledOn = cfg.containsKey("ledOn") ? cfg["ledOn"].as<bool>() : false;

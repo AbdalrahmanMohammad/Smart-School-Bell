@@ -1,20 +1,20 @@
-#ifndef Bell_h
-#define Bell_h
+#ifndef Bulb_h
+#define Bulb_h
 
 #include <Arduino.h>
 #include <Toggelable.h>
 
-class Bell : public Togglable
+class Bulb : public Togglable
 {
 private:
     byte pin;
     byte buttonPin; // it is optional to use
     boolean hasbutton;
-    boolean offState = HIGH;
-    boolean onState = LOW;
+    boolean offState = LOW;
+    boolean onState = HIGH;
 
 public:
-    Bell(byte pin)
+    Bulb(byte pin)
     {
         hasbutton = false;
         this->pin = pin;
@@ -26,7 +26,7 @@ public:
         buttonPin = -1;
     }
 
-    Bell(byte pin, byte buttonPin) : Bell(pin)
+    Bulb(byte pin, byte buttonPin) : Bulb(pin)
     {
         setButton(buttonPin);
     }
@@ -39,23 +39,25 @@ public:
         }
         pinMode(pin, OUTPUT);
         off();
-        setDuration(3000UL); // default duration 5 seconds
+        // setDuration(3000UL); // default duration 5 seconds
     }
 
     virtual void on() override
     {
-        if (getDuration() > 0UL)
-        {
+
             digitalWrite(pin, onState);
-            setStartTime(millis());
-        }
     }
     virtual void off() override
     {
         digitalWrite(pin, offState);
     }
-    virtual void toggle() override // you can just digialWrite(pin,!digitalRead(pin)); but this is better
+    virtual void toggle() override
     {
+        if (isOn()) {
+            off();
+        } else {
+            on();
+        }
     }
 
     virtual bool isOn()
@@ -100,18 +102,9 @@ public:
         btnprevstate = btncurstate;
     }
 
-    virtual void turnOffAfterDuration()
-    {
-        if (getDuration() > 0UL && isOn() && (millis() - getStartTime()) > getDuration())
-        {
-            off();
-        }
-    }
-
     virtual void loop()
     {
         moniterBtn();
-        turnOffAfterDuration();
     }
 };
 

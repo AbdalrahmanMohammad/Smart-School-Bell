@@ -16,7 +16,7 @@ function updateDeviceStatus() {
     .then((response) => response.json())
     .then((data) => {
       updateButton("led-button", "led-status", data.led);
-      updateButton("bell-button", "bell-status", data.bell);
+      updateButton("bulb-button", "bulb-status", data.bulb);
     })
     .catch((error) => {
       console.error("Error:", error);
@@ -47,11 +47,11 @@ function toggleLED() {
     });
 }
 
-function toggleBell() {
-  fetch("/bell/toggle", { method: "POST" })
+function toggleBulb() {
+  fetch("/bulb/toggle", { method: "POST" })
     .then((response) => response.json())
     .then((data) => {
-      updateButton("bell-button", "bell-status", data.bell);
+      updateButton("bulb-button", "bulb-status", data.bulb);
     })
     .catch((error) => {
       console.error("Error:", error);
@@ -158,36 +158,10 @@ function loadSchedules() {
 }
 
 function loadConfig() {
-  fetch('/config')
-    .then(res => res.json())
-    .then(cfg => {
-      const seconds = Math.round((cfg.bellDurationMs || 3000) / 1000);
-      const input = document.getElementById('bell-duration');
-      if (input) input.value = seconds;
-    })
-    .catch(() => {
-      const input = document.getElementById('bell-duration');
-      if (input) input.value = 3;
-    });
+  // Bulb is a simple on/off device - no duration config needed
 }
 
-function saveBellDuration() {
-  const input = document.getElementById('bell-duration');
-  if (!input) return;
-  let seconds = parseInt(input.value, 10);
-  if (isNaN(seconds) || seconds < 0) seconds = 0;
-  if (seconds > 60) seconds = 60;
-  fetch('/config/bell-duration', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ bellDurationSeconds: seconds })
-  })
-    .then(r => r.json())
-    .then(d => {
-      if (!d.success) alert('Failed to save');
-    })
-    .catch(() => alert('Failed to save'));
-}
+// Bulb duration function removed - bulb is simple on/off only
 
 function displaySchedules(schedules) {
   console.log("displaySchedules called with:", schedules);

@@ -70,7 +70,7 @@ void handleStatus()
 {
     StaticJsonDocument<200> doc;
     doc["led"] = led.isOn();
-    doc["bell"] = bell.isOn();
+    doc["bulb"] = bulb.isOn();
 
     String json;
     serializeJson(doc, json);
@@ -99,7 +99,7 @@ static void loadConfigOrDefaults(StaticJsonDocument<256> &cfg)
     if (!f)
     {
         // defaults
-        cfg["bellDurationMs"] = 3000; // 3s default
+        // Bulb is simple on/off - no duration needed
         cfg["ledOn"] = false;
         return;
     }
@@ -109,7 +109,7 @@ static void loadConfigOrDefaults(StaticJsonDocument<256> &cfg)
     if (err)
     {
         cfg.clear();
-        cfg["bellDurationMs"] = 3000;
+        // Bulb is simple on/off - no duration needed
         cfg["ledOn"] = false;
     }
 }
@@ -133,93 +133,16 @@ void handleGetConfig()
     server.send(200, "application/json", json);
 }
 
-void handleUpdateBellDuration()
+// Bulb duration handler removed - bulb is simple on/off only
+
+void handleBulbToggle()
 {
-    if (!server.hasArg("plain"))
-    {
-        server.send(400, "application/json", "{\"success\":false,\"message\":\"No data\"}");
-        return;
-    }
+  
 
-    StaticJsonDocument<128> body;
-    DeserializationError err = deserializeJson(body, server.arg("plain"));
-    if (err)
-    {
-        server.send(400, "application/json", "{\"success\":false,\"message\":\"Bad JSON\"}");
-        return;
-    }
-
-    // Accept either bellDurationMs or seconds
-    unsigned long bellDurationMs = 0;
-    if (body.containsKey("bellDurationMs"))
-    {
-        bellDurationMs = body["bellDurationMs"].as<unsigned long>();
-    }
-    else if (body.containsKey("bellDurationSeconds"))
-    {
-        bellDurationMs = body["bellDurationSeconds"].as<unsigned long>() * 1000UL;
-    }
-    else
-    {
-        server.send(400, "application/json", "{\"success\":false,\"message\":\"Missing duration\"}");
-        return;
-    }
-
-    // Clamp to a reasonable upper bound (e.g., 60s)
-    if (bellDurationMs > 60000UL)
-        bellDurationMs = 60000UL;
-
-    // Persist
-    StaticJsonDocument<256> cfg;
-    loadConfigOrDefaults(cfg);
-    cfg["bellDurationMs"] = bellDurationMs;
-    saveConfig(cfg);
-
-    // Apply immediately
-    bell.setDuration(bellDurationMs);
-
-    server.send(200, "application/json", "{\"success\":true}");
-}
-
-void handleBellToggle()
-{
-    // // Print file content
-    // File file = LittleFS.open("/schedules.json", "r");
-    // if (!file)
-    // {
-    //     dbg("Schedules file not found, assuming no schedules");
-    // }
-    // else
-    // {
-    //     String jsonData = file.readString();
-    //     dbgln("File schedules: " + jsonData);
-    //     file.close();
-    // }
-
-    // // Print separator
-    // dbgln("***********");
-
-    // // Print cached content
-    // if (!schedulesCacheValid || cachedSchedulesDoc == nullptr)
-    // {
-    //     loadSchedulesToCache();
-    // }
-
-    // if (schedulesCacheValid && cachedSchedulesDoc != nullptr)
-    // {
-    //     String cachedJsonData;
-    //     serializeJson(*cachedSchedulesDoc, cachedJsonData);
-    //     dbgln("Cached schedules: " + cachedJsonData);
-    // }
-    // else
-    // {
-    //     dbgln("No cached schedules available");
-    // }
-
-    bell.on();
+    bulb.toggle();
 
     StaticJsonDocument<100> doc;
-    doc["bell"] = bell.isOn();
+    doc["bulb"] = bulb.isOn();
     // dbgln("--------------------------");
     String json;
     serializeJson(doc, json);
@@ -592,7 +515,7 @@ void WifiSetup()
     server.on("/time", handleTime);
     server.on("/status", handleStatus);
     server.on("/led/toggle", HTTP_POST, handleLEDToggle);
-    server.on("/bell/toggle", HTTP_POST, handleBellToggle);
+    server.on("/bulb/toggle", HTTP_POST, handleBulbToggle);
     server.on("/schedules", handleSchedules);
     server.on("/schedules/add", HTTP_POST, handleAddSchedule);
     server.on("/schedules/delete", HTTP_POST, handleDeleteSchedule);
@@ -601,7 +524,7 @@ void WifiSetup()
 
     // Config endpoints
     server.on("/config", handleGetConfig);
-    server.on("/config/bell-duration", HTTP_POST, handleUpdateBellDuration);
+    // Bulb duration endpoint removed - bulb is simple on/off only
     server.begin();
     dbgln("Web server started");
 }

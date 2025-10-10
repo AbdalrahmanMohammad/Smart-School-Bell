@@ -6,7 +6,7 @@ void setup()
   initDebugSerial();
   initLittleFS();
   led.init();
-  bell.init();
+  bulb.init();
   applySavedConfig();
   WifiSetup();
   RtcSetup();

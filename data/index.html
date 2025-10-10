@@ -26,19 +26,15 @@
       <button id="led-button" class="control-btn" onclick="toggleLED()">
         LED: <span id="led-status">Loading...</span>
       </button>
-      <button id="bell-button" class="control-btn" onclick="toggleBell()">
-        Bell: <span id="bell-status">Loading...</span>
+      <button id="bulb-button" class="control-btn" onclick="toggleBulb()">
+        Bulb: <span id="bulb-status">Loading...</span>
       </button>
     </div>
   </div>
   
   <div id="config-panel">
     <h2>Device Settings</h2>
-    <div class="form-group">
-      <label for="bell-duration">Bell Duration (seconds):</label>
-      <input type="number" id="bell-duration" min="0" max="60" step="1" value="3">
-      <button class="control-btn" onclick="saveBellDuration()">Save</button>
-    </div>
+    <p>Bulb is a simple on/off device - no duration settings needed.</p>
   </div>
   <!-- /////////////////////////// -->
   <div id="timer-schedules">

@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <LED.h>
-#include <Bell.h>
-#include "Timer.h"
+#include <Bulb.h>
+// #include "Timer.h"
 #include <Wire.h>
 #include "RTClib.h"
 #include <ESP8266WiFi.h>
@@ -19,9 +19,8 @@ ESP8266WebServer server(80);
 RTC_DS3231 rtc;
 
 
-Timer timer(20UL);
 LED led(D7, D6);
-Bell bell(D5);
+Bulb bulb(D5);
 
 #define DEBUG_SERIAL true
 
