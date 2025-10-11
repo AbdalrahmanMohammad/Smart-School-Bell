@@ -483,10 +483,8 @@ function saveScheduleEdit(index) {
     return;
   }
   
-  if (newOnTime >= newOffTime) {
-    alert("ON time must be before OFF time");
-    return;
-  }
+  // Cross-midnight schedules are allowed (e.g., ON at 22:00, OFF at 08:00)
+  // No validation needed - the NodeMCU handles this correctly
   
   // Get enabled status
   const newEnabled = document.getElementById(`edit-enabled-${index}`).checked;
