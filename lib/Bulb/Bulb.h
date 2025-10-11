@@ -44,18 +44,22 @@ public:
 
     virtual void on() override
     {
-
+        if (!isOn())
             digitalWrite(pin, onState);
     }
     virtual void off() override
     {
-        digitalWrite(pin, offState);
+        if (isOn())
+            digitalWrite(pin, offState);
     }
     virtual void toggle() override
     {
-        if (isOn()) {
+        if (isOn())
+        {
             off();
-        } else {
+        }
+        else
+        {
             on();
         }
     }

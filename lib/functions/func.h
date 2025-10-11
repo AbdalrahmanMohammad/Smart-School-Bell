@@ -1,5 +1,3 @@
-// Global variable to track last triggered time to prevent multiple triggers
-String lastTriggeredTime = "";
 
 // Global variables for schedule caching
 DynamicJsonDocument *cachedSchedulesDoc = nullptr;
@@ -52,15 +50,20 @@ void RtcSetup()
 // Function to load today's schedules into cache
 void loadTodaysSchedulesToCache()
 {
+    dbgln("=== Loading today's schedules to cache ===");
+    
     // Free existing cache if it exists
     if (cachedSchedulesDoc != nullptr)
     {
         delete cachedSchedulesDoc;
         cachedSchedulesDoc = nullptr;
+        dbgln("Freed existing cache");
     }
 
     // Get current day of year
     DateTime now = rtc.now();
+    dbgln("Current RTC time: " + String(now.year()) + "-" + String(now.month()) + "-" + String(now.day()) + " " + String(now.hour()) + ":" + String(now.minute()));
+    
     int currentDayOfYear = 0;
     int daysInMonth[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     
@@ -68,119 +71,117 @@ void loadTodaysSchedulesToCache()
         currentDayOfYear += daysInMonth[i];
     }
     currentDayOfYear += now.day();
+    
+    dbgln("Calculated day of year: " + String(currentDayOfYear));
 
-    // Read schedules from flash memory using streaming approach
-    File file = LittleFS.open("/schedules.txt", "r");
+    // Read schedules from JSON file using streaming approach
+    dbgln("Opening schedules.json for streaming...");
+    File file = LittleFS.open("/schedules.json", "r");
     if (!file)
     {
-        // Fallback to JSON format if text file doesn't exist
-        dbgln("schedules.txt not found, trying schedules.json...");
-        file = LittleFS.open("/schedules.json", "r");
-        if (!file)
-        {
-            schedulesCacheValid = false;
-            dbgln("No schedules file found");
-            return; // No schedules file
-        }
-        
-        // Use JSON parsing for fallback
-        String jsonData = file.readString();
-        file.close();
-        
-        DynamicJsonDocument fullDoc(30000);
-        DeserializationError error = deserializeJson(fullDoc, jsonData);
-        
-        if (error)
-        {
-            dbgln("Failed to parse schedules.json: " + String(error.c_str()));
-            schedulesCacheValid = false;
-            return;
-        }
-        
-        // Create cache with today's schedule
-        cachedSchedulesDoc = new DynamicJsonDocument(1024);
-        JsonArray todaySchedules = cachedSchedulesDoc->createNestedArray("schedules");
-        
-        JsonArray allSchedules = fullDoc["schedules"];
-        bool foundToday = false;
-        
-        for (JsonObject schedule : allSchedules)
-        {
-            if (schedule["d"].as<int>() == currentDayOfYear)
-            {
-                JsonObject todaySchedule = todaySchedules.createNestedObject();
-                todaySchedule["d"] = schedule["d"];
-                todaySchedule["on"] = schedule["on"];
-                todaySchedule["off"] = schedule["off"];
-                todaySchedule["e"] = schedule["e"];
-                foundToday = true;
-                dbgln("Found today's schedule: " + schedule["on"].as<String>() + " to " + schedule["off"].as<String>() + " (bulb)");
-                break;
-            }
-        }
-        
-        if (!foundToday) {
-            dbgln("No schedules found for today (day " + String(currentDayOfYear) + ")");
-        }
-        
-        schedulesCacheValid = true;
-        cachedDayOfYear = currentDayOfYear;
-        dbgln("Today's schedules loaded to cache successfully (JSON fallback)");
+        schedulesCacheValid = false;
+        dbgln("ERROR: schedules.json not found");
         return;
     }
-
-    // Create a new document with only today's schedules
-    cachedSchedulesDoc = new DynamicJsonDocument(1024); // Small cache for just today
+    
+    dbgln("Found schedules.json, using streaming approach");
+    
+    // Create cache with today's schedule
+    cachedSchedulesDoc = new DynamicJsonDocument(512); // Much smaller buffer
     JsonArray todaySchedules = cachedSchedulesDoc->createNestedArray("schedules");
     
     bool foundToday = false;
-    String line;
+    String buffer = "";
+    int bracketCount = 0;
+    bool inSchedulesArray = false;
+    bool inScheduleObject = false;
+    String currentSchedule = "";
+    int processedSchedules = 0;
     
-    // Read line by line to find today's schedule
-    while (file.available()) {
-        line = file.readStringUntil('\n');
-        line.trim();
+    dbgln("Streaming through JSON file...");
+    
+    // Read file character by character
+    while (file.available() && !foundToday)
+    {
+        char c = file.read();
+        buffer += c;
         
-        if (line.length() == 0) continue;
-        
-        // Parse: d,on,off,e (optimized format)
-        int firstComma = line.indexOf(',');
-        int secondComma = line.indexOf(',', firstComma + 1);
-        int thirdComma = line.indexOf(',', secondComma + 1);
-        
-        if (firstComma == -1 || secondComma == -1 || thirdComma == -1) {
-            continue; // Skip malformed lines
+        // Keep buffer small (max 100 chars)
+        if (buffer.length() > 100) {
+            buffer = buffer.substring(buffer.length() - 50); // Keep last 50 chars
         }
         
-        int dayOfYear = line.substring(0, firstComma).toInt();
+        if (c == '[' && buffer.indexOf("\"schedules\"") != -1) {
+            inSchedulesArray = true;
+            dbgln("Found schedules array start");
+            continue;
+        }
         
-        if (dayOfYear == currentDayOfYear) {
-            // Found today's schedule!
-            String onTime = line.substring(firstComma + 1, secondComma);
-            String offTime = line.substring(secondComma + 1, thirdComma);
-            bool enabled = line.substring(thirdComma + 1).toInt() == 1;
+        if (inSchedulesArray && c == '{') {
+            bracketCount++;
+            inScheduleObject = true;
+            currentSchedule = "{";
+            continue;
+        }
+        
+        if (inScheduleObject) {
+            currentSchedule += c;
             
-            JsonObject todaySchedule = todaySchedules.createNestedObject();
-            todaySchedule["d"] = dayOfYear;
-            todaySchedule["on"] = onTime;
-            todaySchedule["off"] = offTime;
-            todaySchedule["e"] = enabled;
-            foundToday = true;
+            if (c == '{') bracketCount++;
+            if (c == '}') bracketCount--;
             
-            dbgln("Found today's schedule: " + onTime + " to " + offTime + " (bulb)");
-            break; // Found today's schedule, no need to continue reading
+            // Complete schedule object found
+            if (bracketCount == 0 && c == '}') {
+                processedSchedules++;
+                
+                // Parse this single schedule
+                DynamicJsonDocument scheduleDoc(200);
+                DeserializationError error = deserializeJson(scheduleDoc, currentSchedule);
+                
+                if (!error) {
+                    int scheduleDay = scheduleDoc["d"].as<int>();
+                    
+                    if (processedSchedules <= 5 || scheduleDay == currentDayOfYear) {
+                        dbgln("Schedule " + String(processedSchedules) + ": Day " + String(scheduleDay) + " vs target " + String(currentDayOfYear));
+                    }
+                    
+                    if (scheduleDay == currentDayOfYear) {
+                        // Found today's schedule!
+                        JsonObject todaySchedule = todaySchedules.createNestedObject();
+                        todaySchedule["d"] = scheduleDoc["d"];
+                        todaySchedule["on"] = scheduleDoc["on"];
+                        todaySchedule["off"] = scheduleDoc["off"];
+                        todaySchedule["e"] = scheduleDoc["e"];
+                        foundToday = true;
+                        
+                        dbgln("SUCCESS: Found today's schedule: " + scheduleDoc["on"].as<String>() + " to " + scheduleDoc["off"].as<String>() + " (enabled: " + String(scheduleDoc["e"].as<bool>() ? "true" : "false") + ")");
+                        break;
+                    }
+                }
+                
+                inScheduleObject = false;
+                currentSchedule = "";
+            }
+        }
+        
+        // Stop if we've processed enough schedules (optimization)
+        if (processedSchedules > currentDayOfYear + 10) {
+            dbgln("Stopping search after " + String(processedSchedules) + " schedules");
+            break;
         }
     }
     
     file.close();
     
+    dbgln("Processed " + String(processedSchedules) + " schedules via streaming");
+    
     if (!foundToday) {
-        dbgln("No schedules found for today (day " + String(currentDayOfYear) + ")");
+        dbgln("WARNING: No schedules found for today (day " + String(currentDayOfYear) + ")");
     }
-
+    
     schedulesCacheValid = true;
     cachedDayOfYear = currentDayOfYear;
-    dbgln("Today's schedules loaded to cache successfully");
+    dbgln("Today's schedules loaded to cache successfully (streaming approach)");
 }
 
 // Function to initialize schedules cache (call in setup)
@@ -191,13 +192,16 @@ void initSchedulesCache()
 
 void checkSchedules()
 {
+    dbgln("=== Checking schedules ===");
+    
     // Get current time first
     DateTime now = rtc.now();
     int currentYear = now.year();
-    dbgln("Current year: " + String(currentYear));
-    if (currentYear < 2025 || currentYear > 2060)
+    dbgln("Current RTC time: " + String(now.year()) + "-" + String(now.month()) + "-" + String(now.day()) + " " + String(now.hour()) + ":" + String(now.minute()));
+    
+    if (currentYear < 2025 || currentYear > 2080)
     {
-        dbgln("Invalid year detected: " + String(currentYear) + ". Skipping schedule check.");
+        dbgln("ERROR: Invalid year detected: " + String(currentYear) + ". Skipping schedule check.");
         return;
     }
 
@@ -209,14 +213,18 @@ void checkSchedules()
         currentDayOfYear += daysInMonth[i];
     }
     currentDayOfYear += now.day();
-
+    
+    dbgln("Calculated day of year: " + String(currentDayOfYear));
+    dbgln("Cache status - Valid: " + String(schedulesCacheValid ? "true" : "false") + ", Doc: " + String(cachedSchedulesDoc != nullptr ? "exists" : "null") + ", Cached day: " + String(cachedDayOfYear));
     // Check if cache is valid and for today
     if (!schedulesCacheValid || cachedSchedulesDoc == nullptr || cachedDayOfYear != currentDayOfYear)
     {
-        dbgln("Schedules cache invalid or day changed, reloading...");
+        dbgln("Cache invalid or day changed, reloading...");
         loadTodaysSchedulesToCache();
         return; // No valid schedules to check
     }
+    
+    dbgln("Cache is valid, proceeding with schedule check");
 
     // Format current time as HH:MM
     String currentTime = "";
@@ -230,12 +238,6 @@ void checkSchedules()
 
     dbgln("Current day of year: " + String(currentDayOfYear) + " Current time: " + currentTime);
     
-    // Prevent multiple triggers in the same minute
-    if (currentTime == lastTriggeredTime)
-    {
-        return;
-    }
-
     // Check each schedule using cached document
     JsonArray schedules = (*cachedSchedulesDoc)["schedules"];
     for (JsonObject schedule : schedules)
@@ -253,29 +255,97 @@ void checkSchedules()
             continue; // Day of year doesn't match
         }
 
-        // Check if current time matches ON time
+        // Print schedule information for today
+        dbgln("=== Today's Schedule Found ===");
+        dbgln("Day of year: " + String(scheduleDayOfYear));
+        dbgln("ON time: " + String(schedule["on"].as<String>()));
+        dbgln("OFF time: " + String(schedule["off"].as<String>()));
+        dbgln("Enabled: " + String(schedule["e"].as<bool>() ? "true" : "false"));
+
+        // Get ON and OFF times
         const char *onTime = schedule["on"];
-        if (strcmp(onTime, currentTime.c_str()) == 0)
+        const char *offTime = schedule["off"];
+        
+        // Convert times to minutes for easier comparison
+        int onMinutes = ((onTime[0] - '0') * 10 + (onTime[1] - '0')) * 60 + 
+                       ((onTime[3] - '0') * 10 + (onTime[4] - '0'));
+        int offMinutes = ((offTime[0] - '0') * 10 + (offTime[1] - '0')) * 60 + 
+                        ((offTime[3] - '0') * 10 + (offTime[4] - '0'));
+        int currentMinutes = now.hour() * 60 + now.minute();
+        
+        // Determine which time comes first (first) and which comes second (second)
+        int firstTime, secondTime;
+        const char *firstTimeStr, *secondTimeStr;
+        
+        if (onMinutes < offMinutes)
         {
-            // ON time matches! Turn on the bulb
-            dbg("Turning ON bulb at scheduled time: ");
-            dbgln(onTime);
-            bulb.on();
-            lastTriggeredTime = currentTime; // Mark this time as triggered
+            // ON comes first, OFF comes second
+            firstTime = onMinutes;
+            secondTime = offMinutes;
+            firstTimeStr = onTime;
+            secondTimeStr = offTime;
         }
-        // Check if current time matches OFF time
         else
         {
-            const char *offTime = schedule["off"];
-            if (strcmp(offTime, currentTime.c_str()) == 0)
+            // OFF comes first, ON comes second
+            firstTime = offMinutes;
+            secondTime = onMinutes;
+            firstTimeStr = offTime;
+            secondTimeStr = onTime;
+        }
+        
+        // Apply time-range logic
+        if (currentMinutes < firstTime && currentMinutes < secondTime)
+        {
+            // Current time is before both times - apply the state of the second time
+            if (onMinutes < offMinutes)
             {
-                // OFF time matches! Turn off the bulb
-                dbg("Turning OFF bulb at scheduled time: ");
-                dbgln(offTime);
+                // ON comes first, OFF comes second - so before both means OFF state
+                dbgln("Time before schedule: " + String(onTime) + " to " + String(offTime) + " - Turning OFF");
                 bulb.off();
-                lastTriggeredTime = currentTime; // Mark this time as triggered
+            }
+            else
+            {
+                // OFF comes first, ON comes second - so before both means ON state
+                dbgln("Time before schedule: " + String(offTime) + " to " + String(onTime) + " - Turning ON");
+                bulb.on();
             }
         }
+        else if (currentMinutes > firstTime && currentMinutes > secondTime)
+        {
+            // Current time is after both times - apply the state of the second time
+            if (onMinutes < offMinutes)
+            {
+                // ON comes first, OFF comes second - so after both means OFF state
+                dbgln("Time after schedule: " + String(onTime) + " to " + String(offTime) + " - Turning OFF");
+                bulb.off();
+            }
+            else
+            {
+                // OFF comes first, ON comes second - so after both means ON state
+                dbgln("Time after schedule: " + String(offTime) + " to " + String(onTime) + " - Turning ON");
+                bulb.on();
+            }
+        }
+        else if (currentMinutes >= firstTime && currentMinutes <= secondTime)
+        {
+            // Current time is between the two times
+            if (onMinutes < offMinutes)
+            {
+                // ON comes first, so we're in the ON period
+                dbgln("Time within ON period: " + String(onTime) + " to " + String(offTime) + " - Turning ON");
+                bulb.on();
+            }
+            else
+            {
+                // OFF comes first, so we're in the OFF period
+                dbgln("Time within OFF period: " + String(offTime) + " to " + String(onTime) + " - Turning OFF");
+                bulb.off();
+            }
+        }
+        
+        // Only process the first matching schedule for the day
+        break;
     }
 }
 
