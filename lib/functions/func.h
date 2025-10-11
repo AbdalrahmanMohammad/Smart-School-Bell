@@ -1,8 +1,9 @@
 
 // Global variables for schedule caching
-DynamicJsonDocument *cachedSchedulesDoc = nullptr;
 bool schedulesCacheValid = false;
 int cachedDayOfYear = -1; // Track which day is cached
+String cachedOnTime = "";
+String cachedOffTime = "";
 
 void initLittleFS()
 {
@@ -52,13 +53,10 @@ void loadTodaysSchedulesToCache()
 {
     dbgln("=== Loading today's schedules to cache ===");
     
-    // Free existing cache if it exists
-    if (cachedSchedulesDoc != nullptr)
-    {
-        delete cachedSchedulesDoc;
-        cachedSchedulesDoc = nullptr;
-        dbgln("Freed existing cache");
-    }
+    // Clear existing cache
+    cachedOnTime = "";
+    cachedOffTime = "";
+    cachedDayOfYear = -1;
 
     // Get current day of year
     DateTime now = rtc.now();
@@ -85,10 +83,6 @@ void loadTodaysSchedulesToCache()
     }
     
     dbgln("Found schedules.json, using streaming approach");
-    
-    // Create cache with today's schedule
-    cachedSchedulesDoc = new DynamicJsonDocument(512); // Much smaller buffer
-    JsonArray todaySchedules = cachedSchedulesDoc->createNestedArray("schedules");
     
     bool foundToday = false;
     String buffer = "";
@@ -147,14 +141,12 @@ void loadTodaysSchedulesToCache()
                     
                     if (scheduleDay == currentDayOfYear) {
                         // Found today's schedule!
-                        JsonObject todaySchedule = todaySchedules.createNestedObject();
-                        todaySchedule["d"] = scheduleDoc["d"];
-                        todaySchedule["on"] = scheduleDoc["on"];
-                        todaySchedule["off"] = scheduleDoc["off"];
-                        // Enable field removed - all schedules are always active
+                        cachedDayOfYear = currentDayOfYear;
+                        cachedOnTime = scheduleDoc["on"].as<String>();
+                        cachedOffTime = scheduleDoc["off"].as<String>();
                         foundToday = true;
                         
-                        dbgln("SUCCESS: Found today's schedule: " + scheduleDoc["on"].as<String>() + " to " + scheduleDoc["off"].as<String>());
+                        dbgln("SUCCESS: Found today's schedule: " + cachedOnTime + " to " + cachedOffTime);
                         break;
                     }
                 }
@@ -177,18 +169,16 @@ void loadTodaysSchedulesToCache()
     
     if (!foundToday) {
         dbgln("WARNING: No schedules found for today (day " + String(currentDayOfYear) + ")");
-        dbgln("Using fallback schedule: Day 1 (January 1) - ON at 18:00, OFF at 06:00");
+        dbgln("Using fallback schedule for today - ON at 18:00, OFF at 06:00");
         
-        // Create fallback schedule for day 1
-        JsonObject fallbackSchedule = todaySchedules.createNestedObject();
-        fallbackSchedule["d"] = currentDayOfYear;  // January 1st
-        fallbackSchedule["on"] = "18:00";
-        fallbackSchedule["off"] = "06:00";
+        // Set fallback schedule for today
+        cachedDayOfYear = currentDayOfYear;
+        cachedOnTime = "18:00";
+        cachedOffTime = "06:00";
         foundToday = true;
     }
     
     schedulesCacheValid = true;
-    cachedDayOfYear = currentDayOfYear;
     dbgln("Today's schedules loaded to cache successfully (streaming approach)");
 }
 
@@ -223,9 +213,9 @@ void checkSchedules()
     currentDayOfYear += now.day();
     
     dbgln("Calculated day of year: " + String(currentDayOfYear));
-    dbgln("Cache status - Valid: " + String(schedulesCacheValid ? "true" : "false") + ", Doc: " + String(cachedSchedulesDoc != nullptr ? "exists" : "null") + ", Cached day: " + String(cachedDayOfYear));
+    dbgln("Cache status - Valid: " + String(schedulesCacheValid ? "true" : "false") + ", Cached day: " + String(cachedDayOfYear));
     // Check if cache is valid and for today
-    if (!schedulesCacheValid || cachedSchedulesDoc == nullptr || cachedDayOfYear != currentDayOfYear)
+    if (!schedulesCacheValid || cachedDayOfYear != currentDayOfYear)
     {
         dbgln("Cache invalid or day changed, reloading...");
         loadTodaysSchedulesToCache();
@@ -246,28 +236,15 @@ void checkSchedules()
 
     dbgln("Current day of year: " + String(currentDayOfYear) + " Current time: " + currentTime);
     
-    // Check each schedule using cached document
-    JsonArray schedules = (*cachedSchedulesDoc)["schedules"];
-    for (JsonObject schedule : schedules)
-    {
-        // All schedules are always active - no enable check needed
+    // Use cached schedule directly
+    dbgln("=== Today's Schedule Found ===");
+    dbgln("Day of year: " + String(cachedDayOfYear));
+    dbgln("ON time: " + cachedOnTime);
+    dbgln("OFF time: " + cachedOffTime);
 
-        // Check if current day of year matches schedule day of year
-        int scheduleDayOfYear = schedule["d"];
-        if (scheduleDayOfYear != currentDayOfYear)
-        {
-            continue; // Day of year doesn't match
-        }
-
-        // Print schedule information for today
-        dbgln("=== Today's Schedule Found ===");
-        dbgln("Day of year: " + String(scheduleDayOfYear));
-        dbgln("ON time: " + String(schedule["on"].as<String>()));
-        dbgln("OFF time: " + String(schedule["off"].as<String>()));
-
-        // Get ON and OFF times
-        const char *onTime = schedule["on"];
-        const char *offTime = schedule["off"];
+    // Get ON and OFF times
+    const char *onTime = cachedOnTime.c_str();
+    const char *offTime = cachedOffTime.c_str();
         
         // Convert times to minutes for easier comparison
         int onMinutes = ((onTime[0] - '0') * 10 + (onTime[1] - '0')) * 60 + 
@@ -346,10 +323,6 @@ void checkSchedules()
                 bulb.off();
             }
         }
-        
-        // Only process the first matching schedule for the day
-        break;
-    }
 }
 
 void controlDevices()
