@@ -154,7 +154,7 @@ void handleEditSchedule()
     int newDayOfYear = requestDoc["d"];
     const char *newOnTime = requestDoc["on"];
     const char *newOffTime = requestDoc["off"];
-    bool newEnabled = requestDoc["e"];
+    // Enable/disable logic removed - all schedules are always active
 
     // Use streaming approach to avoid memory issues
     File file = LittleFS.open("/schedules.json", "r");
@@ -224,16 +224,14 @@ void handleEditSchedule()
             
             if (currentIndex == index)
             {
-                // Write the modified schedule
+                // Write the modified schedule (no enable field needed)
                 tempFile.print("{\"d\":");
                 tempFile.print(newDayOfYear);
                 tempFile.print(",\"on\":\"");
                 tempFile.print(newOnTime);
                 tempFile.print("\",\"off\":\"");
                 tempFile.print(newOffTime);
-                tempFile.print("\",\"e\":");
-                tempFile.print(newEnabled ? "true" : "false");
-                tempFile.print("}");
+                tempFile.print("\"}");
             }
             else
             {

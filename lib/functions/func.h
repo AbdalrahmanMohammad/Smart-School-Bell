@@ -151,10 +151,10 @@ void loadTodaysSchedulesToCache()
                         todaySchedule["d"] = scheduleDoc["d"];
                         todaySchedule["on"] = scheduleDoc["on"];
                         todaySchedule["off"] = scheduleDoc["off"];
-                        todaySchedule["e"] = scheduleDoc["e"];
+                        // Enable field removed - all schedules are always active
                         foundToday = true;
                         
-                        dbgln("SUCCESS: Found today's schedule: " + scheduleDoc["on"].as<String>() + " to " + scheduleDoc["off"].as<String>() + " (enabled: " + String(scheduleDoc["e"].as<bool>() ? "true" : "false") + ")");
+                        dbgln("SUCCESS: Found today's schedule: " + scheduleDoc["on"].as<String>() + " to " + scheduleDoc["off"].as<String>());
                         break;
                     }
                 }
@@ -242,11 +242,7 @@ void checkSchedules()
     JsonArray schedules = (*cachedSchedulesDoc)["schedules"];
     for (JsonObject schedule : schedules)
     {
-        // Check if schedule is enabled
-        if (!schedule["e"].as<bool>())
-        {
-            continue;
-        }
+        // All schedules are always active - no enable check needed
 
         // Check if current day of year matches schedule day of year
         int scheduleDayOfYear = schedule["d"];
@@ -260,7 +256,6 @@ void checkSchedules()
         dbgln("Day of year: " + String(scheduleDayOfYear));
         dbgln("ON time: " + String(schedule["on"].as<String>()));
         dbgln("OFF time: " + String(schedule["off"].as<String>()));
-        dbgln("Enabled: " + String(schedule["e"].as<bool>() ? "true" : "false"));
 
         // Get ON and OFF times
         const char *onTime = schedule["on"];

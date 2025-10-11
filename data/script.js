@@ -226,8 +226,7 @@ function filterSchedulesByMonth() {
     // Find the original index in the full array
     const actualIndex = allSchedules.findIndex(s => s === schedule);
     
-    const statusClass = schedule.e ? "enabled" : "disabled";
-    const statusText = schedule.e ? "ENABLED" : "DISABLED";
+    // Enable/disable logic removed - all schedules are always active
     const formattedDate = formatDayOfYear(schedule.d);
 
     html += `
@@ -236,9 +235,6 @@ function filterSchedulesByMonth() {
         <div class="schedule-info">
           <div class="schedule-date-row">
             <div class="schedule-date" id="date-display-${actualIndex}">${formattedDate}</div>
-            <div class="schedule-status ${statusClass}" onclick="toggleScheduleStatus(${actualIndex})">
-              <div class="toggle-switch ${statusClass}"></div>
-            </div>
           </div>
           <div class="schedule-times">
             <div class="time-slot">
@@ -338,15 +334,7 @@ function calculateDayOfYear(month, day) {
 
 // addSchedule function removed - only edit functionality available
 
-function toggleScheduleStatus(index) {
-  // This function will toggle the schedule status
-  // For now, it just reloads the schedules to show the toggle effect
-  // In a real implementation, you'd send a request to update the status
-  console.log("Toggling schedule status for index:", index);
-  
-  // Simulate toggle by reloading (in real app, you'd update the backend)
-  loadSchedules();
-}
+// toggleScheduleStatus function removed - enable/disable logic removed
 
 // deleteSchedule function removed - only edit functionality available
 
@@ -366,7 +354,6 @@ function editSchedule(index) {
   }
   
   const currentSchedule = window.currentSchedules[index];
-  const currentEnabled = currentSchedule.e;
   const currentDayOfYear = currentSchedule.d;
   const currentOnTime = currentSchedule.on;
   const currentOffTime = currentSchedule.off;
@@ -408,14 +395,7 @@ function editSchedule(index) {
         <input type="time" id="edit-off-time-${index}" value="${currentOffTime}" required>
       </div>
       
-      <div class="edit-section">
-        <label>Status:</label>
-        <div class="edit-toggle-container">
-          <input type="checkbox" id="edit-enabled-${index}" ${currentEnabled ? 'checked' : ''}>
-          <div class="toggle-switch ${currentEnabled ? 'enabled' : 'disabled'}" id="edit-toggle-${index}"></div>
-          <span class="edit-toggle-text">${currentEnabled ? 'Enabled' : 'Disabled'}</span>
-        </div>
-      </div>
+      <!-- Status section removed - all schedules are always active -->
     </div>
     
     <div class="edit-actions">
@@ -428,7 +408,6 @@ function editSchedule(index) {
   dateDisplay.style.display = 'none';
   onTimeDisplay.style.display = 'none';
   offTimeDisplay.style.display = 'none';
-  statusDisplay.style.display = 'none';
   actionsDiv.style.display = 'none';
   
   // Insert edit form
@@ -437,32 +416,7 @@ function editSchedule(index) {
   
   // Month and day selectors removed - date is now read-only
   
-  // Add event listener for toggle text update and visual feedback
-  const toggleCheckbox = document.getElementById(`edit-enabled-${index}`);
-  const toggleText = editForm.querySelector('.edit-toggle-text');
-  const toggleSwitch = document.getElementById(`edit-toggle-${index}`);
-  
-  function updateToggleState() {
-    toggleText.textContent = toggleCheckbox.checked ? 'Enabled' : 'Disabled';
-    
-    // Update the toggle switch classes
-    if (toggleCheckbox.checked) {
-      toggleSwitch.className = 'toggle-switch enabled';
-    } else {
-      toggleSwitch.className = 'toggle-switch disabled';
-    }
-  }
-  
-  toggleCheckbox.addEventListener('change', updateToggleState);
-  
-  // Set initial state
-  updateToggleState();
-  
-  // Make the toggle switch clickable
-  toggleSwitch.addEventListener('click', function() {
-    toggleCheckbox.checked = !toggleCheckbox.checked;
-    updateToggleState();
-  });
+  // Toggle event listeners removed - enable/disable logic removed
 }
 
 function saveScheduleEdit(index) {
@@ -486,8 +440,7 @@ function saveScheduleEdit(index) {
   // Cross-midnight schedules are allowed (e.g., ON at 22:00, OFF at 08:00)
   // No validation needed - the NodeMCU handles this correctly
   
-  // Get enabled status
-  const newEnabled = document.getElementById(`edit-enabled-${index}`).checked;
+  // All schedules are always enabled - no status needed
   const newDayOfYear = calculateDayOfYear(newMonth, newDay);
   
   // Send update request to server
@@ -500,8 +453,7 @@ function saveScheduleEdit(index) {
       index: index, 
       d: newDayOfYear,
       on: newOnTime,
-      off: newOffTime,
-      e: newEnabled
+      off: newOffTime
     }),
   })
     .then((response) => response.json())
@@ -524,7 +476,6 @@ function cancelScheduleEdit(index) {
   const dateDisplay = document.getElementById(`date-display-${index}`);
   const onTimeDisplay = document.getElementById(`on-time-display-${index}`);
   const offTimeDisplay = document.getElementById(`off-time-display-${index}`);
-  const statusDisplay = scheduleItem.querySelector('.schedule-status');
   const actionsDiv = scheduleItem.querySelector('.schedule-actions');
   const editForm = scheduleItem.querySelector('.edit-form');
   
@@ -532,7 +483,6 @@ function cancelScheduleEdit(index) {
   dateDisplay.style.display = 'block';
   onTimeDisplay.style.display = 'inline';
   offTimeDisplay.style.display = 'inline';
-  statusDisplay.style.display = 'flex';
   actionsDiv.style.display = 'flex';
   
   // Remove edit form
