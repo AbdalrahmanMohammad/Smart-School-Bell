@@ -177,6 +177,14 @@ void loadTodaysSchedulesToCache()
     
     if (!foundToday) {
         dbgln("WARNING: No schedules found for today (day " + String(currentDayOfYear) + ")");
+        dbgln("Using fallback schedule: Day 1 (January 1) - ON at 18:00, OFF at 06:00");
+        
+        // Create fallback schedule for day 1
+        JsonObject fallbackSchedule = todaySchedules.createNestedObject();
+        fallbackSchedule["d"] = currentDayOfYear;  // January 1st
+        fallbackSchedule["on"] = "18:00";
+        fallbackSchedule["off"] = "06:00";
+        foundToday = true;
     }
     
     schedulesCacheValid = true;

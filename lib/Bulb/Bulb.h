@@ -41,7 +41,6 @@ public:
         }
         pinMode(pin, OUTPUT);
         off();
-        // setDuration(3000UL); // default duration 5 seconds
     }
 
     virtual void on() override
