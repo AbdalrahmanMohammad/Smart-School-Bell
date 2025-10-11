@@ -9,6 +9,7 @@ class Bulb : public Togglable
 private:
     byte pin;
     byte buttonPin; // it is optional to use
+    String state;
     boolean hasbutton;
     boolean offState = LOW;
     boolean onState = HIGH;
@@ -18,6 +19,7 @@ public:
     {
         hasbutton = false;
         this->pin = pin;
+        state = "off";
         // previous = 0UL;
         // duration = 0UL;
         // startTime = 0UL;
@@ -44,13 +46,13 @@ public:
 
     virtual void on() override
     {
-        if (!isOn())
-            digitalWrite(pin, onState);
+        digitalWrite(pin, onState);
+        state = "on";
     }
     virtual void off() override
     {
-        if (isOn())
-            digitalWrite(pin, offState);
+        digitalWrite(pin, offState);
+        state = "off";
     }
     virtual void toggle() override
     {
@@ -66,7 +68,7 @@ public:
 
     virtual bool isOn()
     {
-        return digitalRead(pin) == onState;
+        return (state == "on");
     }
 
     virtual void setButton(int i)
@@ -100,7 +102,7 @@ public:
         if ((btncurstate == LOW) && (btnprevstate == HIGH) && (millis() - previous > 500)) // button pressed and debounce
         {
             previous = millis(); // for debounce
-            on();
+            toggle();
             btnprevstate = btncurstate;
         }
         btnprevstate = btncurstate;
