@@ -22,7 +22,7 @@ RTC_DS3231 rtc;
 LED led(D7, D6);
 Bulb bulb(D5, D3); // D3 has a button
 
-#define DEBUG_SERIAL true
+#define DEBUG_SERIAL false
 
 #if DEBUG_SERIAL
     #define dbg(...) Serial.print(__VA_ARGS__)
