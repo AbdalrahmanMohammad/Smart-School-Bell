@@ -4,13 +4,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Timer - NodeMCU</title>
+  <title>Palestine Street Light Controller - NodeMCU</title>
   <link rel="stylesheet" href="./style.css">
 </head>
 
 <body>
-  <h1>Smart Timer Controller</h1>
-  <p>Schedule your devices to turn on and off for any day of the year.</p>
+  <h1>🇵🇸 Palestine Street Light Controller</h1>
+  <p>Automated street light control system based on Palestine sunrise/sunset times.</p>
 
   <div id="time-display">
     <h2>Current Time</h2>
@@ -21,24 +21,29 @@
   </div>
 
   <div id="device-controls">
-    <h2>Device Controls</h2>
+    <h2>Street Light Controls</h2>
     <div class="control-buttons">
       <button id="led-button" class="control-btn" onclick="toggleLED()">
-        LED: <span id="led-status">Loading...</span>
+        Master Switch: <span id="led-status">Loading...</span>
       </button>
       <button id="bulb-button" class="control-btn" onclick="toggleBulb()">
-        Bulb: <span id="bulb-status">Loading...</span>
+        Street Light: <span id="bulb-status">Loading...</span>
       </button>
     </div>
+    <p class="info-text">💡 Master Switch ON = Automatic schedule control | OFF = Manual control only</p>
   </div>
   
   <div id="config-panel">
-    <h2>Device Settings</h2>
-    <p>Bulb is a simple on/off device - no duration settings needed.</p>
+    <h2>System Information</h2>
+    <p>📍 Location: Palestine (31.77°N, 35.21°E)</p>
+    <p>🕐 Timezone: Asia/Jerusalem (UTC+2/+3)</p>
+    <p>🌅 Lights ON: 30 minutes after sunset</p>
+    <p>🌇 Lights OFF: 30 minutes before sunrise</p>
   </div>
-  <!-- /////////////////////////// -->
+  
   <div id="timer-schedules">
-    <h2>Smart Timer Schedules</h2>
+    <h2>Sunrise/Sunset Schedule</h2>
+    <p class="info-text">Schedules automatically adjust based on Palestine sun times throughout the year.</p>
     <div id="schedule-controls">
       <div class="month-selector">
         <select id="month-filter" onchange="filterSchedulesByMonth()">

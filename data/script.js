@@ -245,7 +245,7 @@ function filterSchedulesByMonth() {
               <span class="time-label">OFF:</span>
               <span class="time-value" id="off-time-display-${actualIndex}">${schedule.off}</span>
             </div>
-            <span class="type-badge">BULB</span>
+            <span class="type-badge">STREET LIGHT</span>
           </div>
         </div>
         <div class="schedule-actions">
