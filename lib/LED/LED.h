@@ -16,6 +16,7 @@ private:
 
 public:
     boolean checkNow = false;// just for applying the schedule immediately when the led is turned on
+    boolean gotOff=false;
     LED(byte pin)
     {
         hasbutton = false;
@@ -83,6 +84,7 @@ public:
     {
         digitalWrite(pin, LOW);
         state = LOW;
+        gotOff=true;
         // Persist LED state
         StaticJsonDocument<256> cfg;
         File f = LittleFS.open("/config.json", "r");

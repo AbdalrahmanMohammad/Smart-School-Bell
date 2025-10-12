@@ -80,6 +80,7 @@ void handleStatus()
 void handleLEDToggle()
 {
     led.toggle();
+    bulb.persistState();
 
     StaticJsonDocument<100> doc;
     doc["led"] = led.isOn();
@@ -92,17 +93,17 @@ void handleLEDToggle()
 // ===== Config helpers =====
 // Config is now handled by LED class - no duplicate functions needed
 
-
 // Bulb duration handler removed - bulb is simple on/off only
 
 void handleBulbToggle()
 {
     // Only allow manual bulb control when LED is OFF (schedule disabled)
-    if (led.isOn()) {
+    if (led.isOn())
+    {
         StaticJsonDocument<64> errorDoc;
         errorDoc["error"] = "LED is ON - bulb schedule is active. Turn LED OFF for manual control.";
         errorDoc["success"] = false;
-        
+        bulb.persistState();
         String json;
         serializeJson(errorDoc, json);
         server.send(400, "application/json", json);
@@ -115,7 +116,7 @@ void handleBulbToggle()
     StaticJsonDocument<32> doc; // Reduced size for better performance
     doc["bulb"] = bulb.isOn();
     doc["success"] = true;
-    
+
     String json;
     serializeJson(doc, json);
     server.send(200, "application/json", json);
@@ -133,11 +134,9 @@ void handleSchedules()
     // Just return the raw file content - no parsing needed!
     String jsonData = file.readString();
     file.close();
-    
+
     server.send(200, "application/json", jsonData);
 }
-
-
 
 void handleEditSchedule()
 {
@@ -189,25 +188,25 @@ void handleEditSchedule()
 
     // Write opening bracket
     tempFile.print("{\"schedules\":[");
-    
+
     bool firstSchedule = true;
     int currentIndex = 0;
     String line;
-    
+
     // Skip the opening part of the file
     file.readStringUntil('[');
-    
+
     while (file.available() && currentIndex < 366)
     {
         // Read until next schedule object
         String scheduleStr = "";
         int braceCount = 0;
         bool inSchedule = false;
-        
+
         while (file.available())
         {
             char c = file.read();
-            
+
             if (c == '{')
             {
                 braceCount++;
@@ -217,15 +216,15 @@ void handleEditSchedule()
             {
                 braceCount--;
             }
-            
+
             scheduleStr += c;
-            
+
             if (inSchedule && braceCount == 0)
             {
                 break;
             }
         }
-        
+
         if (scheduleStr.length() > 0)
         {
             // Add comma if not first schedule
@@ -233,7 +232,7 @@ void handleEditSchedule()
             {
                 tempFile.print(",");
             }
-            
+
             if (currentIndex == index)
             {
                 // Write the modified schedule (no enable field needed)
@@ -250,11 +249,11 @@ void handleEditSchedule()
                 // Write the original schedule
                 tempFile.print(scheduleStr);
             }
-            
+
             firstSchedule = false;
             currentIndex++;
         }
-        
+
         // Skip comma and whitespace
         while (file.available())
         {
@@ -271,22 +270,22 @@ void handleEditSchedule()
             }
         }
     }
-    
+
     // Write closing brackets
     tempFile.print("]}");
-    
+
     file.close();
     tempFile.close();
-    
+
     // Replace original file with temp file
     if (LittleFS.remove("/schedules.json"))
     {
         LittleFS.rename("/schedules_temp.json", "/schedules.json");
         dbgln("Schedule edited successfully");
-        
+
         // Performance optimization: Reload cache after schedule edit
         loadTodaysSchedulesToCache();
-        
+
         server.send(200, "application/json", "{\"success\":true}");
     }
     else

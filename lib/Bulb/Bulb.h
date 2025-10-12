@@ -102,6 +102,7 @@ public:
         {
             previous = millis(); // for debounce
             toggle();
+            persistState(); // Save state only on physical button press
             btnprevstate = btncurstate;
         }
         btnprevstate = btncurstate;
@@ -110,6 +111,27 @@ public:
     virtual void loop()
     {
         moniterBtn();
+    }
+
+    // Helper method for state persistence
+    void persistState()
+    {
+        StaticJsonDocument<128> cfg; // Reduced size for better performance
+        File f = LittleFS.open("/config.json", "r");
+        if (f)
+        {
+            String c = f.readString();
+            f.close();
+            DeserializationError e = deserializeJson(cfg, c);
+            if (e) cfg.clear();
+        }
+        cfg["bulbOn"] = isOn();
+        File wf = LittleFS.open("/config.json", "w");
+        if (wf)
+        {
+            serializeJson(cfg, wf);
+            wf.close();
+        }
     }
 };
 
