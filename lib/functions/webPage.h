@@ -271,6 +271,10 @@ void handleEditSchedule()
     {
         LittleFS.rename("/schedules_temp.json", "/schedules.json");
         dbgln("Schedule edited successfully");
+        
+        // Performance optimization: Reload cache after schedule edit
+        loadTodaysSchedulesToCache();
+        
         server.send(200, "application/json", "{\"success\":true}");
     }
     else
