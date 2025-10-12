@@ -1,79 +1,70 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Palestine Street Light Controller - NodeMCU</title>
+  <title>نظام التحكم في انارة لاشوارع</title>
   <link rel="stylesheet" href="./style.css">
 </head>
 
 <body>
-  <h1>🇵🇸 Palestine Street Light Controller</h1>
-  <p>Automated street light control system based on Palestine sunrise/sunset times.</p>
+  <p>تحكم تلقائي في انارة الشوارع حسب أوقات الشروق والغروب في فلسطين</p>
 
   <div id="time-display">
-    <h2>Current Time</h2>
-    <p id="current-time">Loading...</p>
+    <h2>الوقت الحالي</h2>
+    <p id="current-time">جاري التحميل...</p>
     <button id="send-time-btn" class="control-btn" onclick="sendTimeToNodeMCU()">
-      Send Time to NodeMCU
+      إرسال الوقت للمتحكم
     </button>
   </div>
 
   <div id="device-controls">
-    <h2>Street Light Controls</h2>
-    <div class="control-buttons">
-      <button id="led-button" class="control-btn" onclick="toggleLED()">
-        Master Switch: <span id="led-status">Loading...</span>
-      </button>
-      <button id="bulb-button" class="control-btn" onclick="toggleBulb()">
-        Street Light: <span id="bulb-status">Loading...</span>
-      </button>
-    </div>
-    <p class="info-text">💡 Master Switch ON = Automatic schedule control | OFF = Manual control only</p>
+    <h2>تحكم انارة الشوارع</h2>
+      <div class="control-buttons">
+        <button id="led-button" class="control-btn" onclick="toggleLED()">
+          تلقائي <span id="led-status">جاري التحميل...</span>
+        </button>
+        <button id="bulb-button" class="control-btn" onclick="toggleBulb()">
+          يدوي: <span id="bulb-status">جاري التحميل...</span>
+        </button>
+      </div>
   </div>
   
-  <div id="config-panel">
-    <h2>System Information</h2>
-    <p>📍 Location: Palestine (31.77°N, 35.21°E)</p>
-    <p>🕐 Timezone: Asia/Jerusalem (UTC+2/+3)</p>
-    <p>🌅 Lights ON: 30 minutes after sunset</p>
-    <p>🌇 Lights OFF: 30 minutes before sunrise</p>
-  </div>
   
   <div id="timer-schedules">
-    <h2>Sunrise/Sunset Schedule</h2>
-    <p class="info-text">Schedules automatically adjust based on Palestine sun times throughout the year.</p>
+    <h2>جدولة الشروق/الغروب</h2>
+    <p class="info-text">تتعدل الجداول تلقائياً بناءً على أوقات الشمس في فلسطين على مدار السنة.</p>
     <div id="schedule-controls">
       <div class="month-selector">
         <select id="month-filter" onchange="filterSchedulesByMonth()">
-          <option value="1" selected>January</option>
-          <option value="2">February</option>
-          <option value="3">March</option>
-          <option value="4">April</option>
-          <option value="5">May</option>
-          <option value="6">June</option>
-          <option value="7">July</option>
-          <option value="8">August</option>
-          <option value="9">September</option>
-          <option value="10">October</option>
-          <option value="11">November</option>
-          <option value="12">December</option>
+          <option value="1" selected>يناير</option>
+          <option value="2">فبراير</option>
+          <option value="3">مارس</option>
+          <option value="4">أبريل</option>
+          <option value="5">مايو</option>
+          <option value="6">يونيو</option>
+          <option value="7">يوليو</option>
+          <option value="8">أغسطس</option>
+          <option value="9">سبتمبر</option>
+          <option value="10">أكتوبر</option>
+          <option value="11">نوفمبر</option>
+          <option value="12">ديسمبر</option>
         </select>
       </div>
       <div id="schedule-counter">
-        <p>Schedules: <span id="current-schedule-count">0</span>/<span id="total-schedule-count">366</span></p>
+        <p>الجداول: <span id="current-schedule-count">0</span>/<span id="total-schedule-count">366</span></p>
       </div>
     </div>
     <div id="schedules-list">
-      <p>Loading schedules...</p>
+      <p>جاري تحميل الجداول...</p>
     </div>
 
   <!-- Add/Delete features removed - only edit functionality available -->
   </div>
   <!-- //////////////////////////////////////// -->
-  <a class="button" href="/">Refresh</a>
-  <footer>NodeMCU Web Server &copy; 2025</footer>
+  <a class="button" href="/">تحديث</a>
+  <footer>سمارت بيت <br>0594969091</footer>
 
   <script src="./script.js"></script>
 </body>

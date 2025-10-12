@@ -356,8 +356,8 @@ void handleSendTime()
 void WifiSetup()
 {
     // Configure as Access Point
-    const char *ssid = "NodeMCU_AP";
-    const char *password = "12345678"; // at least 8 chars
+    const char *ssid = "Street-Lights";
+    const char *password = "11881188"; // at least 8 chars
 
     WiFi.softAP(ssid, password);
 

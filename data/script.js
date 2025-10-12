@@ -6,7 +6,7 @@ function updateTime() {
     })
     .catch((error) => {
       document.getElementById("current-time").textContent =
-        "Error loading time";
+        "خطأ في تحميل الوقت";
       console.error("Error:", error);
     });
 }
@@ -17,6 +17,8 @@ function updateDeviceStatus() {
     .then((data) => {
       updateButton("led-button", "led-status", data.led);
       updateButton("bulb-button", "bulb-status", data.bulb);
+      // Store LED state for manual button control
+      window.ledState = data.led;
     })
     .catch((error) => {
       console.error("Error:", error);
@@ -29,11 +31,14 @@ function updateButton(buttonId, statusId, isOn) {
 
   if (isOn) {
     button.className = "control-btn on";
-    status.textContent = "ON";
+    status.textContent = "تشغيل";
   } else {
     button.className = "control-btn off";
-    status.textContent = "OFF";
+    status.textContent = "إيقاف";
   }
+  
+  // Update manual button state based on automatic mode
+  updateManualButtonState();
 }
 
 function toggleLED() {
@@ -41,6 +46,8 @@ function toggleLED() {
     .then((response) => response.json())
     .then((data) => {
       updateButton("led-button", "led-status", data.led);
+      // Update LED state for manual button control
+      window.ledState = data.led;
     })
     .catch((error) => {
       console.error("Error:", error);
@@ -48,6 +55,12 @@ function toggleLED() {
 }
 
 function toggleBulb() {
+  // Check if automatic mode is on - if so, disable manual control
+  if (window.ledState) {
+    alert("التحكم التلقائي مفعل - لا يمكن التحكم اليدوي");
+    return;
+  }
+  
   fetch("/bulb/toggle", { method: "POST" })
     .then((response) => response.json())
     .then((data) => {
@@ -88,11 +101,11 @@ function sendTimeToNodeMCU() {
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
-        console.log("Time sent successfully to NodeMCU");
+        console.log("تم إرسال الوقت بنجاح إلى NodeMCU");
         // Show a brief success message
         const button = document.getElementById("send-time-btn");
         const originalText = button.textContent;
-        button.textContent = "Time Sent!";
+        button.textContent = "تم الإرسال!";
         button.style.background = "#4caf50";
         setTimeout(() => {
           button.textContent = originalText;
@@ -100,13 +113,38 @@ function sendTimeToNodeMCU() {
         }, 2000);
       } else {
         console.error("Error sending time:", data.message);
-        alert("Error sending time to NodeMCU: " + data.message);
+        alert("خطأ في إرسال الوقت إلى NodeMCU: " + data.message);
       }
     })
     .catch((error) => {
       console.error("Error:", error);
-      alert("Error sending time to NodeMCU");
+      alert("خطأ في إرسال الوقت إلى NodeMCU");
     });
+}
+
+// Function to update manual button state based on automatic mode
+function updateManualButtonState() {
+  const manualButton = document.getElementById("bulb-button");
+  if (!manualButton) return;
+  
+  if (window.ledState) {
+    // Automatic mode is ON - disable manual button
+    manualButton.disabled = true;
+    manualButton.className = "control-btn disabled";
+    manualButton.style.opacity = "0.5";
+    manualButton.style.cursor = "not-allowed";
+  } else {
+    // Automatic mode is OFF - enable manual button
+    manualButton.disabled = false;
+    manualButton.style.opacity = "1";
+    manualButton.style.cursor = "pointer";
+    // Restore original button class based on bulb state
+    const bulbStatus = document.getElementById("bulb-status");
+    if (bulbStatus) {
+      const isOn = bulbStatus.textContent === "تشغيل";
+      manualButton.className = isOn ? "control-btn on" : "control-btn off";
+    }
+  }
 }
 
 // Update time immediately when page loads
@@ -153,7 +191,7 @@ function loadSchedules() {
     .catch((error) => {
       console.error("Error loading schedules:", error);
       document.getElementById("schedules-list").innerHTML =
-        "<p>Error loading schedules</p>";
+        "<p>خطأ في تحميل الجداول</p>";
     });
 }
 
@@ -171,7 +209,7 @@ function displaySchedules(schedules) {
   
   if (!schedules) {
     console.error("Schedules is undefined or null");
-    document.getElementById("schedules-list").innerHTML = "<p>Error: No schedules data</p>";
+    document.getElementById("schedules-list").innerHTML = "<p>خطأ: لا توجد بيانات جداول</p>";
     return;
   }
   
@@ -186,7 +224,7 @@ function displaySchedules(schedules) {
   }
 
   if (schedules.length === 0) {
-    document.getElementById("schedules-list").innerHTML = "<p>No schedules configured</p>";
+    document.getElementById("schedules-list").innerHTML = "<p>لا توجد جداول مُعدة</p>";
     return;
   }
 
@@ -201,7 +239,7 @@ function filterSchedulesByMonth() {
   const scheduleCounter = document.getElementById("current-schedule-count");
   
   if (!allSchedules || allSchedules.length === 0) {
-    container.innerHTML = "<p>No schedules found</p>";
+    container.innerHTML = "<p>لا توجد جداول</p>";
     if (scheduleCounter) scheduleCounter.textContent = "0";
     return;
   }
@@ -217,7 +255,7 @@ function filterSchedulesByMonth() {
   }
 
   if (filteredSchedules.length === 0) {
-    container.innerHTML = "<p>No schedules found for selected month</p>";
+    container.innerHTML = "<p>لا توجد جداول للشهر المحدد</p>";
     return;
   }
 
@@ -238,18 +276,18 @@ function filterSchedulesByMonth() {
           </div>
           <div class="schedule-times">
             <div class="time-slot">
-              <span class="time-label">ON:</span>
+              <span class="time-label">تشغيل:</span>
               <span class="time-value" id="on-time-display-${actualIndex}">${schedule.on}</span>
             </div>
             <div class="time-slot">
-              <span class="time-label">OFF:</span>
+              <span class="time-label">إيقاف:</span>
               <span class="time-value" id="off-time-display-${actualIndex}">${schedule.off}</span>
             </div>
-            <span class="type-badge">STREET LIGHT</span>
+            <span class="type-badge">ضوء الشارع</span>
           </div>
         </div>
         <div class="schedule-actions">
-          <button class="edit-btn" onclick="editSchedule(${actualIndex})">Edit</button>
+          <button class="edit-btn" onclick="editSchedule(${actualIndex})">تعديل</button>
         </div>
       </div>
     `;
@@ -273,8 +311,8 @@ function getMonthFromDayOfYear(dayOfYear) {
 
 function formatDayOfYear(dayOfYear) {
   const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+    "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
   ];
   
   // Calculate month and day from day of year
@@ -359,8 +397,8 @@ function editSchedule(index) {
   const currentOffTime = currentSchedule.off;
   
   // Convert day of year to month and day
-  const monthNames = ["January", "February", "March", "April", "May", "June",
-                     "July", "August", "September", "October", "November", "December"];
+  const monthNames = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+                     "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
   const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   
   let month = 0;
@@ -377,7 +415,7 @@ function editSchedule(index) {
   editForm.innerHTML = `
     <div class="edit-content">
       <div class="edit-section">
-        <label>Date:</label>
+        <label>التاريخ:</label>
         <div class="readonly-field">
           <span class="readonly-text">${monthNames[month - 1]} ${day}</span>
           <input type="hidden" id="edit-month-${index}" value="${month}">
@@ -386,12 +424,12 @@ function editSchedule(index) {
       </div>
       
       <div class="edit-section">
-        <label>ON Time:</label>
+        <label>وقت التشغيل:</label>
         <input type="time" id="edit-on-time-${index}" value="${currentOnTime}" required>
       </div>
       
       <div class="edit-section">
-        <label>OFF Time:</label>
+        <label>وقت الإيقاف:</label>
         <input type="time" id="edit-off-time-${index}" value="${currentOffTime}" required>
       </div>
       
@@ -399,8 +437,8 @@ function editSchedule(index) {
     </div>
     
     <div class="edit-actions">
-      <button class="save-btn" onclick="saveScheduleEdit(${index})">Save</button>
-      <button class="cancel-btn" onclick="cancelScheduleEdit(${index})">Cancel</button>
+      <button class="save-btn" onclick="saveScheduleEdit(${index})">حفظ</button>
+      <button class="cancel-btn" onclick="cancelScheduleEdit(${index})">إلغاء</button>
     </div>
   `;
   
@@ -428,12 +466,12 @@ function saveScheduleEdit(index) {
   // Month and day validation removed - they are now read-only hidden fields
   
   if (!newOnTime) {
-    alert("Please select a valid ON time");
+    alert("يرجى اختيار وقت تشغيل صحيح");
     return;
   }
   
   if (!newOffTime) {
-    alert("Please select a valid OFF time");
+    alert("يرجى اختيار وقت إيقاف صحيح");
     return;
   }
   
@@ -462,12 +500,12 @@ function saveScheduleEdit(index) {
         cancelScheduleEdit(index);
         loadSchedules(); // Reload to ensure consistency
       } else {
-        alert("Error updating schedule: " + (data.message || "Unknown error"));
+        alert("خطأ في تحديث الجدول: " + (data.message || "خطأ غير معروف"));
       }
     })
     .catch((error) => {
       console.error("Error:", error);
-      alert("Error updating schedule");
+      alert("خطأ في تحديث الجدول");
     });
 }
 
