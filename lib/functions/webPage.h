@@ -97,13 +97,25 @@ void handleLEDToggle()
 
 void handleBulbToggle()
 {
-  
+    // Only allow manual bulb control when LED is OFF (schedule disabled)
+    if (led.isOn()) {
+        StaticJsonDocument<64> errorDoc;
+        errorDoc["error"] = "LED is ON - bulb schedule is active. Turn LED OFF for manual control.";
+        errorDoc["success"] = false;
+        
+        String json;
+        serializeJson(errorDoc, json);
+        server.send(400, "application/json", json);
+        return;
+    }
 
+    // LED is OFF - allow manual control
     bulb.toggle();
 
-    StaticJsonDocument<100> doc;
+    StaticJsonDocument<32> doc; // Reduced size for better performance
     doc["bulb"] = bulb.isOn();
-    // dbgln("--------------------------");
+    doc["success"] = true;
+    
     String json;
     serializeJson(doc, json);
     server.send(200, "application/json", json);

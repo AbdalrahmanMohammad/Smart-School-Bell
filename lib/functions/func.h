@@ -214,6 +214,11 @@ int cachedCurrentDay = -1;
 
 void checkSchedules()
 {
+    // Performance optimization: Early exit if LED is OFF (bulb schedule disabled)
+    if (!led.isOn()) {
+        return; // LED acts as master switch - if OFF, bulb schedule is disabled
+    }
+    
     // Get current time first
     DateTime now = rtc.now();
     int currentYear = now.year();
@@ -324,6 +329,7 @@ const unsigned long SCHEDULE_CHECK_INTERVAL = 10000; // Check every 10 seconds i
 void controlDevices()
 {
     led.loop();
+    if(!led.isOn())
     bulb.loop();
     
     // Only check schedules every 30 seconds to improve performance
