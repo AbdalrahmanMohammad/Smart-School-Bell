@@ -331,11 +331,14 @@ void controlDevices()
     led.loop();
     if(!led.isOn())
     bulb.loop();
+
+    if(led.checkNow) {
+                checkSchedules();
+        led.checkNow = false;
+    }
     
-    // Only check schedules every 30 seconds to improve performance
     unsigned long currentTime = millis();
-    if (currentTime - lastScheduleCheck >= SCHEDULE_CHECK_INTERVAL) {
-        checkSchedules();
+    if (currentTime - lastScheduleCheck >= SCHEDULE_CHECK_INTERVAL) {        checkSchedules();
         lastScheduleCheck = currentTime;
     }
 }

@@ -15,6 +15,7 @@ private:
     boolean hasbutton;
 
 public:
+    boolean checkNow = false;// just for applying the schedule immediately when the led is turned on
     LED(byte pin)
     {
         hasbutton = false;
@@ -56,6 +57,7 @@ public:
 
     virtual void on() override
     {
+        checkNow = true;
         digitalWrite(pin, HIGH);
         state = HIGH;
         // Persist LED state
@@ -66,7 +68,8 @@ public:
             String c = f.readString();
             f.close();
             DeserializationError e = deserializeJson(cfg, c);
-            if (e) cfg.clear();
+            if (e)
+                cfg.clear();
         }
         cfg["ledOn"] = true;
         File wf = LittleFS.open("/config.json", "w");
@@ -88,7 +91,8 @@ public:
             String c = f.readString();
             f.close();
             DeserializationError e = deserializeJson(cfg, c);
-            if (e) cfg.clear();
+            if (e)
+                cfg.clear();
         }
         cfg["ledOn"] = false;
         File wf = LittleFS.open("/config.json", "w");
