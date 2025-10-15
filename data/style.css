@@ -119,6 +119,42 @@ footer {
   margin: 30px 0;
 }
 
+.control-description {
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  text-align: right;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.control-description p {
+  margin: 8px 0;
+  font-size: 1em;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+@media (max-width: 768px) {
+  .control-description {
+    max-width: 100%;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .control-description {
+    padding: 10px;
+    margin: 15px 10px;
+  }
+  
+  .control-description p {
+    font-size: 0.9em;
+  }
+}
+
 #timer-schedules {
   margin: 30px 0;
   text-align: right;

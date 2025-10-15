@@ -171,7 +171,31 @@ document.addEventListener('DOMContentLoaded', function() {
   if (monthSelect) {
     monthSelect.addEventListener('change', updateDaySelector);
   }
+  
+  // Set current month when page loads
+  setCurrentMonth();
 });
+
+// Function to set the current month in the dropdown
+function setCurrentMonth() {
+  const monthSelect = document.getElementById('month-filter');
+  if (monthSelect) {
+    try {
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
+      
+      // Set the dropdown to current month
+      monthSelect.value = currentMonth.toString();
+      
+      // Trigger the filter to show current month's schedules
+      filterSchedulesByMonth();
+    } catch (error) {
+      // If anything goes wrong, default to January
+      monthSelect.value = '1';
+      filterSchedulesByMonth();
+    }
+  }
+}
 
 // Update schedules every 5 seconds
 // setInterval(loadSchedules, 5000);
