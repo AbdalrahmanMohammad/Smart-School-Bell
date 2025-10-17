@@ -19,6 +19,10 @@ function updateDeviceStatus() {
       updateButton("bulb-button", "bulb-status", data.bulb);
       // Store LED state for manual button control
       window.ledState = data.led;
+      // Store stopLedFlag state
+      window.stopLedFlag = data.stopLedFlag;
+      // Update button states based on stopLedFlag
+      updateButtonStates();
     })
     .catch((error) => {
       console.error("Error:", error);
@@ -42,6 +46,12 @@ function updateButton(buttonId, statusId, isOn) {
 }
 
 function toggleLED() {
+  // Check if stopLedFlag is true - if so, disable LED control
+  if (window.stopLedFlag) {
+    alert("تم إيقاف التحكم في الإضاءة - لا يمكن التحكم في LED");
+    return;
+  }
+  
   fetch("/led/toggle", { method: "POST" })
     .then((response) => response.json())
     .then((data) => {
@@ -55,6 +65,12 @@ function toggleLED() {
 }
 
 function toggleBulb() {
+  // Check if stopLedFlag is true - if so, disable bulb control
+  if (window.stopLedFlag) {
+    alert("تم إيقاف التحكم في الإضاءة - لا يمكن التحكم في المصباح");
+    return;
+  }
+  
   // Check if automatic mode is on - if so, disable manual control
   if (window.ledState) {
     alert("التحكم التلقائي مفعل - لا يمكن التحكم اليدوي");
@@ -122,29 +138,73 @@ function sendTimeToNodeMCU() {
     });
 }
 
-// Function to update manual button state based on automatic mode
-function updateManualButtonState() {
-  const manualButton = document.getElementById("bulb-button");
-  if (!manualButton) return;
+// Function to update button states based on stopLedFlag and automatic mode
+function updateButtonStates() {
+  const ledButton = document.getElementById("led-button");
+  const bulbButton = document.getElementById("bulb-button");
+  const warningMessage = document.getElementById("stop-led-warning");
   
-  if (window.ledState) {
-    // Automatic mode is ON - disable manual button
-    manualButton.disabled = true;
-    manualButton.className = "control-btn disabled";
-    manualButton.style.opacity = "0.5";
-    manualButton.style.cursor = "not-allowed";
+  if (!ledButton || !bulbButton) return;
+  
+  if (window.stopLedFlag) {
+    // stopLedFlag is true - disable both buttons and show warning
+    ledButton.disabled = true;
+    ledButton.className = "control-btn disabled";
+    ledButton.style.opacity = "0.5";
+    ledButton.style.cursor = "not-allowed";
+    
+    bulbButton.disabled = true;
+    bulbButton.className = "control-btn disabled";
+    bulbButton.style.opacity = "0.5";
+    bulbButton.style.cursor = "not-allowed";
+    
+    // Show warning message
+    if (warningMessage) {
+      warningMessage.style.display = "block";
+    }
   } else {
-    // Automatic mode is OFF - enable manual button
-    manualButton.disabled = false;
-    manualButton.style.opacity = "1";
-    manualButton.style.cursor = "pointer";
-    // Restore original button class based on bulb state
-    const bulbStatus = document.getElementById("bulb-status");
-    if (bulbStatus) {
-      const isOn = bulbStatus.textContent === "تشغيل";
-      manualButton.className = isOn ? "control-btn on" : "control-btn off";
+    // stopLedFlag is false - restore normal behavior and hide warning
+    if (warningMessage) {
+      warningMessage.style.display = "none";
+    }
+    
+    // LED button is always enabled
+    ledButton.disabled = false;
+    ledButton.style.opacity = "1";
+    ledButton.style.cursor = "pointer";
+    // Restore LED button class based on LED state
+    const ledStatus = document.getElementById("led-status");
+    if (ledStatus) {
+      const isOn = ledStatus.textContent === "تشغيل";
+      ledButton.className = isOn ? "control-btn on" : "control-btn off";
+    }
+    
+    // Bulb button depends on automatic mode
+    if (window.ledState) {
+      // Automatic mode is ON - disable manual button
+      bulbButton.disabled = true;
+      bulbButton.className = "control-btn disabled";
+      bulbButton.style.opacity = "0.5";
+      bulbButton.style.cursor = "not-allowed";
+    } else {
+      // Automatic mode is OFF - enable manual button
+      bulbButton.disabled = false;
+      bulbButton.style.opacity = "1";
+      bulbButton.style.cursor = "pointer";
+      // Restore original button class based on bulb state
+      const bulbStatus = document.getElementById("bulb-status");
+      if (bulbStatus) {
+        const isOn = bulbStatus.textContent === "تشغيل";
+        bulbButton.className = isOn ? "control-btn on" : "control-btn off";
+      }
     }
   }
+}
+
+// Function to update manual button state based on automatic mode (legacy function)
+function updateManualButtonState() {
+  // This function is now handled by updateButtonStates()
+  updateButtonStates();
 }
 
 // Update time immediately when page loads
@@ -300,12 +360,12 @@ function filterSchedulesByMonth() {
           </div>
           <div class="schedule-times">
             <div class="time-slot">
-              <span class="time-label">إيقاف:</span>
-              <span class="time-value" id="off-time-display-${actualIndex}">${schedule.off}</span>
-            </div>
-            <div class="time-slot">
               <span class="time-label">تشغيل:</span>
               <span class="time-value" id="on-time-display-${actualIndex}">${schedule.on}</span>
+            </div>
+            <div class="time-slot">
+              <span class="time-label">إيقاف:</span>
+              <span class="time-value" id="off-time-display-${actualIndex}">${schedule.off}</span>
             </div>
             <span class="type-badge">ضوء الشارع</span>
           </div>

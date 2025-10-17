@@ -22,6 +22,9 @@ RTC_DS3231 rtc;
 LED led(D7, D6);
 Bulb bulb(D5, D3); // D3 has a button
 
+// Global flag to stop LED operation
+bool stopLedFlag = false;
+
 #define DEBUG_SERIAL false
 
 #if DEBUG_SERIAL

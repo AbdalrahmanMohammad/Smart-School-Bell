@@ -225,10 +225,10 @@ int cachedCurrentYear = -1;
 int cachedCurrentMonth = -1;
 int cachedCurrentDay = -1;
 
-void checkSchedules()
+void checkSchedules(boolean flag)
 {
     // Performance optimization: Early exit if LED is OFF (bulb schedule disabled)
-    if (!led.isOn())
+    if (!flag)
     {
         return; // LED acts as master switch - if OFF, bulb schedule is disabled
     }
@@ -346,26 +346,32 @@ const unsigned long SCHEDULE_CHECK_INTERVAL = 10000; // Check every 10 seconds i
 
 void controlDevices()
 {
-    led.loop();
-    if (!led.isOn())
-        bulb.loop();
-
-    if (led.gotOff)
+    if (stopLedFlag == false)
     {
-        bulb.persistState();
-        led.gotOff = false;
-    }
+        led.loop();
+        if (!led.isOn())
+            bulb.loop();
 
-    if (led.checkNow) // Check if LED state just changed to ON
-    {
-        checkSchedules(); // Immediate sync
-        led.checkNow = false;
-    }
+        if (led.gotOff)
+        {
+            bulb.persistState();
+            led.gotOff = false;
+        }
 
+        if (led.checkNow) // Check if LED state just changed to ON
+        {
+            checkSchedules(stopLedFlag || led.isOn()); // Immediate sync
+            led.checkNow = false;
+        }
+    }
     unsigned long currentTime = millis();
     if (currentTime - lastScheduleCheck >= SCHEDULE_CHECK_INTERVAL)
     {
-        checkSchedules(); // Regular schedule check
+        checkSchedules(stopLedFlag || led.isOn()); // Regular schedule check
+        if (stopLedFlag)
+        {
+            led.on();
+        }
         lastScheduleCheck = currentTime;
     }
 }
@@ -410,6 +416,10 @@ void applySavedConfig()
         }
         dbgln("Bulb state restored: " + String(bulbOn ? "ON" : "OFF"));
     }
+    
+    // Load stopLedFlag with default value false
+    stopLedFlag = cfg.containsKey("stopLedFlag") ? cfg["stopLedFlag"].as<bool>() : false;
+    dbgln("stopLedFlag restored from config.json: " + String(stopLedFlag ? "true" : "false"));
 }
 
 void showTime()
@@ -434,4 +444,28 @@ void showTime()
     dbg(now.second(), DEC);
     dbgln();
 }
+
+// Functions to save and load stopLedFlag from main config.json
+void saveStopLedFlag()
+{
+    StaticJsonDocument<256> cfg;
+    File f = LittleFS.open("/config.json", "r");
+    if (f)
+    {
+        String c = f.readString();
+        f.close();
+        DeserializationError e = deserializeJson(cfg, c);
+        if (e)
+            cfg.clear();
+    }
+    cfg["stopLedFlag"] = stopLedFlag;
+    File wf = LittleFS.open("/config.json", "w");
+    if (wf)
+    {
+        serializeJson(cfg, wf);
+        wf.close();
+        dbgln("stopLedFlag saved to config.json: " + String(stopLedFlag ? "true" : "false"));
+    }
+}
+
 #include <webPage.h>

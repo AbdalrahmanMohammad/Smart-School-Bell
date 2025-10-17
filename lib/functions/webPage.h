@@ -71,6 +71,7 @@ void handleStatus()
     StaticJsonDocument<200> doc;
     doc["led"] = led.isOn();
     doc["bulb"] = bulb.isOn();
+    doc["stopLedFlag"] = stopLedFlag;
 
     String json;
     serializeJson(doc, json);
@@ -90,7 +91,31 @@ void handleLEDToggle()
     server.send(200, "application/json", json);
 }
 
-// ===== Config helpers =====
+void handleStopLedOn()
+{
+    stopLedFlag = true;
+    saveStopLedFlag(); // Save to non-volatile storage
+    
+    StaticJsonDocument<100> doc;
+    doc["stopLedFlag"] = stopLedFlag;
+    
+    String json;
+    serializeJson(doc, json);
+    server.send(200, "application/json", json);
+}
+
+void handleStopLedOff()
+{
+    stopLedFlag = false;
+    saveStopLedFlag(); // Save to non-volatile storage
+    
+    StaticJsonDocument<100> doc;
+    doc["stopLedFlag"] = stopLedFlag;
+    
+    String json;
+    serializeJson(doc, json);
+    server.send(200, "application/json", json);
+}
 // Config is now handled by LED class - no duplicate functions needed
 
 // Bulb duration handler removed - bulb is simple on/off only
@@ -373,6 +398,8 @@ void WifiSetup()
     server.on("/status", handleStatus);
     server.on("/led/toggle", HTTP_POST, handleLEDToggle);
     server.on("/bulb/toggle", HTTP_POST, handleBulbToggle);
+    server.on("/stop-led/on", handleStopLedOn);
+    server.on("/stop-led/off", handleStopLedOff);
     server.on("/schedules", handleSchedules);
     server.on("/schedules/edit", HTTP_POST, handleEditSchedule); // Added edit route
     server.on("/send-time", HTTP_POST, handleSendTime);          // Added send-time route
