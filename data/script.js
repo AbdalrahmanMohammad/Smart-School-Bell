@@ -300,12 +300,12 @@ function filterSchedulesByMonth() {
           </div>
           <div class="schedule-times">
             <div class="time-slot">
-              <span class="time-label">تشغيل:</span>
-              <span class="time-value" id="on-time-display-${actualIndex}">${schedule.on}</span>
-            </div>
-            <div class="time-slot">
               <span class="time-label">إيقاف:</span>
               <span class="time-value" id="off-time-display-${actualIndex}">${schedule.off}</span>
+            </div>
+            <div class="time-slot">
+              <span class="time-label">تشغيل:</span>
+              <span class="time-value" id="on-time-display-${actualIndex}">${schedule.on}</span>
             </div>
             <span class="type-badge">ضوء الشارع</span>
           </div>
