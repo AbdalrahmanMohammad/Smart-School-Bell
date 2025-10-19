@@ -51,6 +51,62 @@ footer {
   opacity: 0.8;
 }
 
+/* Emergency panel */
+/* Emergency trigger - subtle link/button */
+#emergency-trigger {
+  display: block;
+  margin: 12px auto 0 auto;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  padding: 6px 12px;
+  opacity: 0.7;
+  font-size: 0.9em;
+  cursor: pointer;
+  user-select: none;
+}
+
+#emergency-trigger:hover {
+  opacity: 0.95;
+}
+
+/* Modal base */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 600px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  padding: 20px;
+  position: relative;
+}
+
+.modal-content h2 {
+  color: #ffd54f;
+  margin-top: 0;
+}
+
+.modal-close {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: transparent;
+  color: white;
+  border: none;
+  font-size: 1.5em;
+  cursor: pointer;
+}
+
 .control-buttons {
   display: flex;
   justify-content: center;

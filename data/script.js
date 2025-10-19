@@ -234,6 +234,9 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Set current month when page loads
   setCurrentMonth();
+
+  // Emergency panel is now always visible
+  setupEmergencyModal();
 });
 
 // Function to set the current month in the dropdown
@@ -255,6 +258,85 @@ function setCurrentMonth() {
       filterSchedulesByMonth();
     }
   }
+}
+
+function setupEmergencyModal() {
+  const trigger = document.getElementById('emergency-trigger');
+  const modal = document.getElementById('emergency-modal');
+  if (!trigger || !modal) return;
+
+  let clickCount = 0;
+  let clickTimer = null;
+
+  const reset = () => {
+    clickCount = 0;
+    clearTimeout(clickTimer);
+    clickTimer = null;
+  };
+
+  const open = () => {
+    modal.style.display = 'flex';
+    reset();
+  };
+
+  // Require a quick double-click to open (within 500ms)
+  trigger.addEventListener('click', () => {
+    clickCount += 1;
+    if (clickCount === 1) {
+      clickTimer = setTimeout(reset, 500);
+    } else if (clickCount === 2) {
+      open();
+    }
+  });
+
+  // Also support long-press (1.5s)
+  let pressTimer = null;
+  const startPress = () => {
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(open, 1500);
+  };
+  const cancelPress = () => clearTimeout(pressTimer);
+  trigger.addEventListener('mousedown', startPress);
+  trigger.addEventListener('mouseup', cancelPress);
+  trigger.addEventListener('mouseleave', cancelPress);
+  trigger.addEventListener('touchstart', startPress, { passive: true });
+  trigger.addEventListener('touchend', cancelPress);
+  trigger.addEventListener('touchcancel', cancelPress);
+
+  // Close when clicking backdrop
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeEmergencyModal();
+  });
+}
+
+function closeEmergencyModal() {
+  const modal = document.getElementById('emergency-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+// Emergency API calls
+function emergencyStopLed(turnOn) {
+  const endpoint = turnOn ? '/stop-led/on' : '/stop-led/off';
+  fetch(endpoint, { method: 'POST' })
+    .then(r => r.json().catch(() => ({})))
+    .then(() => {
+      // refresh status UI after change
+      updateDeviceStatus();
+      // small visual feedback on buttons
+      const onBtn = document.getElementById('stop-led-on');
+      const offBtn = document.getElementById('stop-led-off');
+      if (turnOn) {
+        if (onBtn) onBtn.className = 'control-btn off';
+        if (offBtn) offBtn.className = 'control-btn on';
+      } else {
+        if (onBtn) onBtn.className = 'control-btn off';
+        if (offBtn) offBtn.className = 'control-btn on';
+      }
+    })
+    .catch(err => {
+      console.error('Emergency API error', err);
+      alert('تعذر تنفيذ إجراء الطوارئ');
+    });
 }
 
 // Update schedules every 5 seconds

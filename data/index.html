@@ -22,7 +22,7 @@
   <div id="device-controls">
     <h2>تحكم انارة الشوارع</h2>
     <div id="stop-led-warning" class="warning-message" style="display: none;">
-      <p>⚠️ تم إيقاف التحكم في الإضاءة - جميع الأزرار معطلة</p>
+      <p>⚠️ تم إيقاف التحكم في الإضاءة - جميع الأزرار معطلة.<br>الجهاز يعمل فقط بشكل تلقائي حسب الجدول المحدد.</p>
     </div>
       <div class="control-buttons">
         <button id="led-button" class="control-btn" onclick="toggleLED()">
@@ -36,6 +36,19 @@
         <p>-في حالة مؤشر التحكم التلقائي مفعل، يكون التحكم فقط حسب الجدول والتحكم اليدوي لا يعمل.</p>
         <p>-في حالة التحكم التلقائي غير مفعل، يكون التحكم فقط من خلال كبسة التحكم اليدوي والجدول لا يعمل.</p>
       </div>
+  </div>
+
+  <!-- Emergency modal (hidden by default) -->
+  <div id="emergency-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <button class="modal-close" aria-label="إغلاق" onclick="closeEmergencyModal()">×</button>
+      <h2>وضع الطوارئ</h2>
+      <p class="info-text">يقوم هذا الاجراء بايقاف عمل كل المفاتيح، مما يعني أن الجهاز سيقوم بالعمل باستمارار حسب جدول المواعيد فقط.<br>هذا الخيار ضروري في حالة وجود الجهاز بالقرب من مصدر تيار، لمنع تداخل الموجات والتأثير على الجهاز.</p>
+      <div class="control-buttons">
+        <button id="stop-led-on" class="control-btn off" onclick="emergencyStopLed(false)">إيقاف وضع الطوارئ</button>
+        <button id="stop-led-off" class="control-btn on" onclick="emergencyStopLed(true)">تفعيل وضع الطوارئ</button>
+      </div>
+    </div>
   </div>
   
   
@@ -71,6 +84,10 @@
   </div>
   <!-- //////////////////////////////////////// -->
   <a class="button" href="/">تحديث</a>
+  <!-- Emergency trigger placed at bottom of page -->
+  <div id="emergency-trigger" title="نظام الطوارئ">
+    <span>إجراءات الطوارئ</span>
+  </div>
   <footer>سمارت بيت <br>0594969091</footer>
 
   <script src="./script.js"></script>

@@ -3,17 +3,17 @@
 
 void setup()
 {
-  delay(2000); // wait for a second
+  delay(500); // wait for a second
   initDebugSerial();
   initLittleFS();
   led.init();
   bulb.init();
   applySavedConfig();
-  delay(1000);
+  delay(500);
   WifiSetup();
   RtcSetup();
   initSchedulesCache(); // Load schedules once at startup
-  delay(1000);
+  delay(500);
 }
 
 void loop()
