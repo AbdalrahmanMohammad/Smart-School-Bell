@@ -95,26 +95,34 @@ void handleStopLedOn()
 {
     stopLedFlag = true;
     saveStopLedFlag(); // Save to non-volatile storage
-    
-    StaticJsonDocument<100> doc;
+
+    StaticJsonDocument<200> doc;
     doc["stopLedFlag"] = stopLedFlag;
-    
+    doc["success"] = true;
+    doc["message"] = "Emergency mode activated - All lights will remain ON";
+    led.on(); // Ensure LED is ON in emergency mode
     String json;
     serializeJson(doc, json);
     server.send(200, "application/json", json);
+
+    dbgln("Emergency mode ON - stopLedFlag activated");
 }
 
 void handleStopLedOff()
 {
     stopLedFlag = false;
     saveStopLedFlag(); // Save to non-volatile storage
-    
-    StaticJsonDocument<100> doc;
+
+    StaticJsonDocument<200> doc;
     doc["stopLedFlag"] = stopLedFlag;
-    
+    doc["success"] = true;
+    doc["message"] = "Emergency mode deactivated - Normal schedule resumed";
+
     String json;
     serializeJson(doc, json);
     server.send(200, "application/json", json);
+
+    dbgln("Emergency mode OFF - stopLedFlag deactivated");
 }
 // Config is now handled by LED class - no duplicate functions needed
 

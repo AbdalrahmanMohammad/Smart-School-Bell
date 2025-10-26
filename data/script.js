@@ -317,26 +317,72 @@ function closeEmergencyModal() {
 // Emergency API calls
 function emergencyStopLed(turnOn) {
   const endpoint = turnOn ? '/stop-led/on' : '/stop-led/off';
+  
   fetch(endpoint, { method: 'POST' })
-    .then(r => r.json().catch(() => ({})))
-    .then(() => {
-      // refresh status UI after change
-      updateDeviceStatus();
-      // small visual feedback on buttons
-      const onBtn = document.getElementById('stop-led-on');
-      const offBtn = document.getElementById('stop-led-off');
-      if (turnOn) {
-        if (onBtn) onBtn.className = 'control-btn off';
-        if (offBtn) offBtn.className = 'control-btn on';
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        // Show simple success feedback
+        const message = turnOn ? 'تم التفعيل بنجاح' : 'تم إيقاف التفعيل';
+        showNotification(message, 'success');
+        
+        // Refresh status UI after change
+        setTimeout(() => updateDeviceStatus(), 500);
       } else {
-        if (onBtn) onBtn.className = 'control-btn off';
-        if (offBtn) offBtn.className = 'control-btn on';
+        console.error('Emergency operation failed:', data.message);
+        alert('خطأ في تنفيذ إجراء الطوارئ');
       }
     })
     .catch(err => {
       console.error('Emergency API error', err);
       alert('تعذر تنفيذ إجراء الطوارئ');
     });
+}
+
+// Helper function to show notifications
+function showNotification(message, type = 'info') {
+  // Check if notification element exists, create if not
+  let notification = document.getElementById('notification-toast');
+  if (!notification) {
+    notification = document.createElement('div');
+    notification.id = 'notification-toast';
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 15px 25px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 10000;
+      font-size: 16px;
+      font-weight: bold;
+      text-align: center;
+      max-width: 90%;
+      animation: slideDown 0.3s ease-out;
+    `;
+    document.body.appendChild(notification);
+  }
+  
+  // Set colors based on type
+  if (type === 'success') {
+    notification.style.background = '#4caf50';
+    notification.style.color = 'white';
+  } else if (type === 'error') {
+    notification.style.background = '#f44336';
+    notification.style.color = 'white';
+  } else {
+    notification.style.background = '#2196F3';
+    notification.style.color = 'white';
+  }
+  
+  notification.textContent = message;
+  notification.style.display = 'block';
+  
+  // Auto-hide after 3 seconds
+  setTimeout(() => {
+    notification.style.display = 'none';
+  }, 3000);
 }
 
 // Update schedules every 5 seconds
