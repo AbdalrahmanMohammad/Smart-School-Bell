@@ -13,6 +13,12 @@ private:
     byte buttonPin; // it is optional to use
     boolean state;
     boolean hasbutton;
+    
+    // EMI filtering variables - time-based hold detection
+    unsigned long buttonPressStartTime = 0;  // When button first went LOW
+    bool buttonPressDetected = false;  // Flag to track if we're timing a press
+    bool buttonActionExecuted = false;  // Prevents multiple toggles while holding
+    static const unsigned long BUTTON_HOLD_TIME_MS = 1000;  // 1 second hold for maximum EMI protection
 
 public:
     boolean checkNow = false;// just for applying the schedule immediately when the led is turned on
@@ -150,12 +156,36 @@ public:
 
         btncurstate = btnstate();
 
-        if ((btncurstate == LOW) && (btnprevstate == HIGH) && (millis() - previous > 500)) // button pressed and debounce
+        // EMI-resistant time-based hold filtering
+        if (btncurstate == LOW)
         {
-            previous = millis(); // for debounce
-            toggle();
-            btnprevstate = btncurstate;
+            if (!buttonPressDetected && !buttonActionExecuted)
+            {
+                // Button just went LOW - start timing
+                buttonPressStartTime = millis();
+                buttonPressDetected = true;
+            }
+            else if (buttonPressDetected && !buttonActionExecuted)
+            {
+                // Button is still LOW - check if held long enough
+                if ((millis() - buttonPressStartTime >= BUTTON_HOLD_TIME_MS) && 
+                    (millis() - previous > 500))  // Overall debounce between toggles
+                {
+                    // Button held for required time - it's a real press!
+                    previous = millis();
+                    toggle();
+                    buttonActionExecuted = true;  // Prevent re-triggering until released
+                }
+            }
+            // If buttonActionExecuted is true, do nothing - wait for release
         }
+        else
+        {
+            // Button is HIGH (released) - reset everything for next press
+            buttonPressDetected = false;
+            buttonActionExecuted = false;
+        }
+        
         btnprevstate = btncurstate;
     }
 
