@@ -181,7 +181,7 @@ void checkSchedules()
             {
                 dbg("Toggling LED at scheduled time: ");
                 dbgln(scheduleTime);
-                led.off();
+                led.on();
                 lastTriggeredTime = currentTime; // Mark this time as triggered
             }
         }
@@ -191,6 +191,9 @@ void checkSchedules()
 void controlDevices()
 {
     led.loop();
+    if(!led.isOn()&&bell.isOn()){
+      bell.off(); // Ensure bell is off if LED is off
+    }
     bell.loop();
     checkSchedules(); // Add schedule checking
 }

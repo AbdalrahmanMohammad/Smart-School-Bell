@@ -10,8 +10,9 @@ private:
     byte pin;
     byte buttonPin; // it is optional to use
     boolean hasbutton;
-    boolean offState = HIGH;
-    boolean onState = LOW;
+    boolean offState = LOW;
+    boolean onState = HIGH;
+    unsigned long alarmTime;
 
 public:
     Bell(byte pin)
@@ -21,6 +22,7 @@ public:
         // previous = 0UL;
         // duration = 0UL;
         // startTime = 0UL;
+        alarmTime = 0UL;
         btncurstate = HIGH;  //
         btnprevstate = HIGH; //
         buttonPin = -1;
@@ -39,7 +41,7 @@ public:
         }
         pinMode(pin, OUTPUT);
         off();
-        setDuration(3000UL); // default duration 5 seconds
+        setDuration(20000UL); // default duration 5 seconds
     }
 
     virtual void on() override
@@ -48,6 +50,7 @@ public:
         {
             digitalWrite(pin, onState);
             setStartTime(millis());
+            alarmTime = millis();
         }
     }
     virtual void off() override
@@ -106,11 +109,19 @@ public:
         {
             off();
         }
+        else if (getDuration() > 0UL && isOn() && (millis() - alarmTime) > 5000UL)
+        {
+            digitalWrite(pin, offState);
+            delay(100);
+            digitalWrite(pin, onState);
+            alarmTime = millis();
+        }
     }
 
     virtual void loop()
     {
         moniterBtn();
+        if(isOn())
         turnOffAfterDuration();
     }
 };
