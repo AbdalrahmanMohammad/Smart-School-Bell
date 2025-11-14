@@ -576,15 +576,50 @@ void handleSendTime()
 
 void WifiSetup()
 {
-    // Configure as Access Point
-    const char *ssid = "NodeMCU_AP";
-    const char *password = "12345678"; // at least 8 chars
+    // Configure to connect to existing WiFi network
+    const char *ssid = "PL";        // Replace with your WiFi network name
+    const char *password = "876543219"; // Replace with your WiFi password
 
-    WiFi.softAP(ssid, password);
+    // Set WiFi mode to Station (client) mode
+    WiFi.mode(WIFI_STA);
+    
+    // Configure static IP address
+    IPAddress local_IP(192, 168, 1, 222);
+    IPAddress gateway(192, 168, 1, 1);
+    IPAddress subnet(255, 255, 255, 0);
+    IPAddress dns(192, 168, 1, 1);
+    
+    if (!WiFi.config(local_IP, gateway, subnet, dns))
+    {
+        dbgln("Failed to configure static IP!");
+    }
+    
+    WiFi.begin(ssid, password);
 
-    dbgln("Access Point Started");
-    dbg("IP address: ");
-    dbgln(WiFi.softAPIP());
+    dbg("Connecting to WiFi: ");
+    dbgln(ssid);
+
+    // Wait for connection with timeout (20 seconds)
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 40)
+    {
+        delay(500);
+        dbg(".");
+        attempts++;
+    }
+    dbgln();
+
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        dbgln("WiFi connected!");
+        dbg("IP address: ");
+        dbgln(WiFi.localIP());
+    }
+    else
+    {
+        dbgln("WiFi connection failed!");
+        dbgln("Please check your credentials and try again.");
+    }
 
     // Setup web server routes
     server.on("/", handleRoot);
