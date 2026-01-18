@@ -95,11 +95,6 @@ void initSchedulesCache()
 
 void checkSchedules()
 {
-    if (!led.isOn())
-    {
-        return;
-    }
-
     // Check if cache is valid
     if (!schedulesCacheValid || cachedSchedulesDoc == nullptr)
     {
@@ -170,7 +165,7 @@ void checkSchedules()
         {
             // Time matches! Ring the bell
             const char *type = schedule["type"];
-            if (strcmp(type, "bell") == 0)
+            if (strcmp(type, "bell") == 0 && led.isOn())
             {
                 dbg("Ringing bell at scheduled time: ");
                 dbgln(scheduleTime);
@@ -191,11 +186,17 @@ void checkSchedules()
 void controlDevices()
 {
     led.loop();
-    if(!led.isOn()&&bell.isOn()){
-      bell.off(); // Ensure bell is off if LED is off
+    if (!led.isOn() && bell.isOn())
+    {
+        bell.off(); // Ensure bell is off if LED is off
     }
     bell.loop();
-    checkSchedules(); // Add schedule checking
+    static unsigned long lastScheduleCheck = 0;
+    if (millis() - lastScheduleCheck >= 10000)
+    {
+        lastScheduleCheck = millis();
+        checkSchedules(); // Add schedule checking
+    }
 }
 
 void applySavedConfig()
